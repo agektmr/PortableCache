@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>PortableCache Example</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="cache-version" content="20130510">
+    <link rel="cachable" href="css/bootstrap.css" type="text/css">
+    <link rel="cachable" href="css/bootstrap-responsive.css" type="text/css">
+    <script src="../src/PortableCache.js"></script>
+    <script>
+      window.addEventListener('load', function() {
+        var head = document.querySelector('head');
+        document.querySelector('#head').innerText = head.innerHTML;
+      });
+    </script>
+  </head>
+  <body>
+    <div class="navbar">
+      <div class="navbar-inner">
+        <div class="container">
+          <span class="brand">PortableCache.js</span>
+        </div>
+      </div>
+    </div>
+    <div class="container">
+      <div class="hero-unit">
+        <h1>Welcome to ProtableCache.js</h1>
+      </div>
+      <pre id="head">
+      </pre>
+    </div>
+  </body>
+</html>
