@@ -7,13 +7,7 @@
     <meta name="cache-version" content="20130510">
     <link rel="cachable" href="css/bootstrap.css" type="text/css">
     <link rel="cachable" href="css/bootstrap-responsive.css" type="text/css">
-    <script src="../src/PortableCache.js"></script>
-    <script>
-      window.addEventListener('load', function() {
-        var head = document.querySelector('head');
-        document.querySelector('#head').innerText = head.innerHTML;
-      });
-    </script>
+    <script src="js/PortableCache.js"></script>
   </head>
   <body>
     <div class="navbar">
@@ -25,10 +19,50 @@
     </div>
     <div class="container">
       <div class="hero-unit">
-        <h1>Welcome to ProtableCache.js</h1>
+        <h1>ProtableCache.js</h1>
+        <p>Cache assets, reduce downloads, load faster.</p>
+        <a href="http://github.com/agektmr/PortableCache.js" target="_blank" class="btn btn-primary">View on Github</a>
       </div>
-      <pre id="head">
-      </pre>
+      <div>
+        <h2>How to use</h2>
+        <p>All you have to do is to insert tags like following:</p>
+        <pre>&lt;meta name="cache-version" content="20130510"&gt;
+&lt;link rel="cachable" href="css/bootstrap.css" type="text/css"&gt;
+&lt;link rel="cachable" href="css/bootstrap-responsive.css" type="text/css"&gt;</pre>
+        <ul>
+          <li>Add cache version as <code>meta</code> tag.</li>
+          <li>Add resource link with <code>rel="cachable"</code>.</li>
+          <li>Load PortableCache.js</li>
+        </ul>
+        <p>Everything else will be taken care of by PortableCache.js.</p>
+
+        <h2>What does it do?</h2>
+        <p>PortableCache.js automatically caches all resources indicated as <code>cachable</code> to the best available storage in user's browser.<br/>
+        Supported storages ordered in priority:</p>
+        <ol>
+          <li>FileSystem</li>
+          <li>IndexedDB</li>
+          <li>WebSQL DB</li>
+          <li>LocalStorage</li>
+        </ol>
+        <p>Confirmed it works on:</p>
+        <ul>
+          <li>Chrome Desktop, Android, iOS</li>
+          <li>Firefox Desktop, Android</li>
+          <li>Opera Desktop (latest), Android (latest)</li>
+          <li>Safari Desktop (latest), iOS (latest)</li>
+        </ul>
+        <p>still needs some work on Android legacy browsers.</p>
+        <h2>Current Status</h2>
+        <p>Under development. Very early stage.</p>
+        <h2>Author</h2>
+        <ul>
+          <li>Eiji Kitamura (<a href="http://google.com/+agektmr" target="_blank">+agektmr</a>, <a href="http://twitter.com/agektmr" target="_blank">@agektmr</a>)</li>
+        </ul>
+      </div>
     </div>
+    <footer>
+      <hr/>
+    </footer>
   </body>
 </html>

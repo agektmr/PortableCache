@@ -1,6 +1,5 @@
 # PortableCache.js
-
-PortableCache.js caches assets on your mobile site and reduces number of resources to download, resulting in faster load.
+Cache assets, reduce downloads, load faster.
 
 ## How to use
 All you have to do is to insert tags like following:  
@@ -22,10 +21,22 @@ Everything else will be taken care of by PortableCache.js.
 PortableCache.js automatically caches all resources indicated as ```cachable``` to the best available storage in user's browser.  
 Supported storages ordered in priority:
 
-* FileSystem
-* IndexedDB
-* WebSQL DB
-* LocalStorage
+1. FileSystem
+2. IndexedDB
+3. WebSQL DB
+4. LocalStorage
+
+Confirmed it works on:
+
+* Chrome Desktop, Android, iOS
+* Firefox Desktop, Android
+* Opera Desktop (latest), Android (latest)
+* Safari Desktop (latest), iOS (latest)
+
+still needs some work on Android legacy browsers.
 
 ## Current Status
 Under development. Very early stage.
+
+## Author
+* Eiji Kitamura ([+agektmr](http://google.com/+agektmr), [@agektmr](http://twitter.com/agektmr))
