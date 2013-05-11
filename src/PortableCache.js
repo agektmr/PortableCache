@@ -49,13 +49,12 @@
      */
     var cacheVersion = document.querySelector('meta[name="cache-version"]'),
         version = cacheVersion && cacheVersion.getAttribute('content') || '',
-        current = localStorage.cache_version,
+        current = localStorage.getItem('cache_version'),
         links = document.querySelectorAll('link[rel="cachable"]');
     Array.prototype.forEach.call(links, function(link) {
       var elem = null;
       cache.load(link, current !== version, function(data) {
         if (data) {
-          if (debug) console.log('content cached', data);
           elem = cache.createElement(link, data);
           link.parentNode.insertBefore(elem, link);
           link.parentNode.removeChild(link);
@@ -65,7 +64,7 @@
         }
       });
     });
-    localStorage.cache_version = version;
+    localStorage.setItem('cache_version', version);
   };
 
   var fetch = function(url, callback) {
@@ -115,12 +114,24 @@
         // Fetch the resource
         fetch(url, (function(content) {
           // Store as cache
+          if (debug) console.log('Caching content.');
           storage.set(url, type, content, callback);
         }).bind(this));
       // No change
       } else {
         // See if cache exists
-        storage.get(url, type, callback);
+        storage.get(url, type, function(data) {
+          if (data) {
+            if (debug) console.log('Using cached data.', data);
+            callback(data);
+          } else {
+            fetch(url, function(content) {
+              // Store as cache
+              if (debug) console.log('Cache not found. Caching content.');
+              storage.set(url, type, content, callback);
+            });
+          }
+        });
       }
     },
 
@@ -128,12 +139,12 @@
       var elem = null;
 
       if (!data.cache_url) {
-        if (Blob) {
+        if (Blob && URL) {
           var blob = new Blob([data.content], {type: data.type});
           data.cache_url = URL.createObjectURL(blob);
 
         // Are there still browsers with BlobBuilder support?
-        } else if (window.BlobBuilder) {
+        } else if (window.BlobBuilder && URL) {
           var bb = new BlobBuilder();
           bb.append(data.content);
           var blob = bb.getBlob(data.type);
@@ -173,7 +184,6 @@
           elem = document.createElement('script');
           elem.setAttribute('src',    data.cache_url);
           break;
-
 
         default:
           throw 'cachable link type not specified or unrecognizable';
@@ -359,7 +369,7 @@
             var data = results.rows.item(0);
             callback(data);
           } else {
-            if (debug) console.error('Error getting WebSQL', e);
+            if (debug) console.error('Error getting WebSQL');
             callback(undefined);
           }
         }, function(e) {
