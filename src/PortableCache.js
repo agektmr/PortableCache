@@ -24,6 +24,13 @@
   var Blob              = window.Blob ||
                           undefined;
 
+  var URL               = window.URL ||
+                          window.webkitURL ||
+                          window.mozURL ||
+                          window.msURL ||
+                          window.oURL ||
+                          undefined;
+
   /**
     initialization steps
     - obtain version info
@@ -51,22 +58,22 @@
     });
   };
 
-  var getURL = function(type, content) {
-    if (Blob) {
-      var blob = new Blob([content], {type: type});
-      return URL.createObjectURL(blob);
+  // var getURL = function(type, content) {
+  //   if (Blob) {
+  //     var blob = new Blob([content], {type: type});
+  //     return URL.createObjectURL(blob);
 
-    // Are there still browsers with BlobBuilder support?
-    } else if (BlobBuilder) {
-      var bb = new BlobBuilder();
-      bb.append(content);
-      var blob = bb.getBlob(type);
-      return URL.createObjectURL(blob);
+  //   // Are there still browsers with BlobBuilder support?
+  //   } else if (BlobBuilder) {
+  //     var bb = new BlobBuilder();
+  //     bb.append(content);
+  //     var blob = bb.getBlob(type);
+  //     return URL.createObjectURL(blob);
 
-    } else {
-      // TODO: create inline content
-    }
-  };
+  //   } else {
+  //     // TODO: create inline content
+  //   }
+  // };
 
   var fetch = function(url, callback) {
     var xhr = new XMLHttpRequest();
