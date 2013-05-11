@@ -47,33 +47,26 @@
      * <link rel="cachable" href="" type="text/css">
      * <link rel="cachable" href="" type="text/javascript">
      */
-    var cacheVersion = document.querySelector('meta[name="cache-version"]');
-    var links = document.querySelectorAll('link[rel="cachable"]');
+    var cacheVersion = document.querySelector('meta[name="cache-version"]'),
+        version = cacheVersion && cacheVersion.getAttribute('content') || '',
+        current = localStorage.cache_version,
+        links = document.querySelectorAll('link[rel="cachable"]');
     Array.prototype.forEach.call(links, function(link) {
-      var version = cacheVersion && cacheVersion.getAttribute('content') || '';
-      cache.load(link, version, function(dom) {
-        link.parentNode.insertBefore(dom, link);
-        link.parentNode.removeChild(link);
+      var elem = null;
+      cache.load(link, current !== version, function(data) {
+        if (data) {
+          if (debug) console.log('content cached', data);
+          elem = cache.createElement(link, data);
+          link.parentNode.insertBefore(elem, link);
+          link.parentNode.removeChild(link);
+        } else {
+          if (debug) console.log('failed to get cached content', data);
+          throw 'PortableCache had problem';
+        }
       });
     });
+    localStorage.cache_version = version;
   };
-
-  // var getURL = function(type, content) {
-  //   if (Blob) {
-  //     var blob = new Blob([content], {type: type});
-  //     return URL.createObjectURL(blob);
-
-  //   // Are there still browsers with BlobBuilder support?
-  //   } else if (BlobBuilder) {
-  //     var bb = new BlobBuilder();
-  //     bb.append(content);
-  //     var blob = bb.getBlob(type);
-  //     return URL.createObjectURL(blob);
-
-  //   } else {
-  //     // TODO: create inline content
-  //   }
-  // };
 
   var fetch = function(url, callback) {
     var xhr = new XMLHttpRequest();
@@ -111,86 +104,93 @@
   };
 
   PortableCache.prototype = {
-    load: function(link, version, callback) {
-      var url = link.getAttribute('href');
-      var type = link.getAttribute('type');
+    load: function(link, requires_update, callback) {
+      var url     = link.getAttribute('href');
+      var type    = link.getAttribute('type');
 
-      // If no storages are available
-      if (storage) {
-        // See if cache exists
-        storage.get(url, type, version, (function(cache_url) {
-          // If not cached
-          if (!cache_url) {
-            if (debug) console.log('cache not found. fetching.');
+      if (!storage) return;
 
-            // Fetch the resource
-            fetch(url, (function(content) {
-              if (debug) console.log('fetched content:', url);
-
-              // Store as cache
-              storage.set(url, type, version, content, (function(cache_url) {
-                if (cache_url) {
-                  if (debug) console.log('content cached');
-                  var dom = this.createDOM(link, cache_url);
-                  callback(dom);
-
-                } else {
-                  callback(undefined);
-
-                }
-              }).bind(this));
-            }).bind(this));
-
-          // If cached
-          } else {
-            if (debug) console.log('cache found:', cache_url);
-            var dom = this.createDOM(link, cache_url);
-            callback(dom);
-
-          }
+      // New version
+      if (requires_update) {
+        // Fetch the resource
+        fetch(url, (function(content) {
+          // Store as cache
+          storage.set(url, type, content, callback);
         }).bind(this));
+      // No change
+      } else {
+        // See if cache exists
+        storage.get(url, type, callback);
       }
     },
 
-    createDOM: function(link, url) {
-      var type = link.getAttribute('type');
-      switch (type) {
-        case 'text/css':
-          var elem = document.createElement('link');
-          elem.setAttribute('rel',    'stylesheet');
-          elem.setAttribute('href',   url);
-          elem.setAttribute('title',  link.href);
+    createElement: function(link, data) {
+      var elem = null;
 
-          // Copy attributes
-          for (var i = 0; i < link.attributes.length; i++) {
-            var attr = link.attributes[i];
-            if (attr.name !== 'href' && attr.name !== 'rel') {
-              elem.setAttribute(attr.name, attr.textContent);
-            }
+      if (!data.cache_url) {
+        if (Blob) {
+          var blob = new Blob([data.content], {type: data.type});
+          data.cache_url = URL.createObjectURL(blob);
+
+        // Are there still browsers with BlobBuilder support?
+        } else if (window.BlobBuilder) {
+          var bb = new BlobBuilder();
+          bb.append(data.content);
+          var blob = bb.getBlob(data.type);
+          data.cache_url = URL.createObjectURL(blob);
+
+        // Inline content in the worst case
+        } else if (data.content) {
+          // TODO: create inline content
+          switch (link.getAttribute('type')) {
+            case 'text/css':
+              elem = document.createElement('style');
+              elem.textContent = data.content;
+              break;
+
+            case 'text/javascript':
+              elem = document.createElement('script');
+              elem.textContent = data.content;
+              break;
+
+            default:
+              throw 'cachable link type not specified or unrecognizable';
+              break;
           }
+          // exit if inline
           return elem;
+        }
+      }
+
+      switch (link.getAttribute('type')) {
+        case 'text/css':
+          elem = document.createElement('link');
+          elem.setAttribute('rel',    'stylesheet');
+          elem.setAttribute('href',   data.cache_url);
+          break;
 
         case 'text/javascript':
-          var elem = document.createElement('script');
-          elem.setAttribute('src',    url);
-          elem.setAttribute('title',  link.href);
+          elem = document.createElement('script');
+          elem.setAttribute('src',    data.cache_url);
+          break;
 
-          // Copy attributes
-          for (var i = 0; i < link.attributes.length; i++) {
-            var attr = link.attributes[i];
-            if (attr.name !== 'href' && attr.name !== 'rel') {
-              elem.setAttribute(attr.name, attr.textContent);
-            }
-          }
-          return elem;
 
         default:
           throw 'cachable link type not specified or unrecognizable';
           break;
       }
-    },
-    clean: function() {
-      storage.clean(version);
+
+      // elem.setAttribute('title',  link.href);
+
+      // Copy attributes
+      for (var i = 0; i < link.attributes.length; i++) {
+        var attr = link.attributes[i];
+        if (attr.name !== 'href' && attr.name !== 'rel') {
+          elem.setAttribute(attr.name, attr.value);
+        }
+      }
+
+      return elem;
     }
   };
 
@@ -205,14 +205,21 @@
     });
   };
   fileSystem.prototype = {
-    set: function(url, type, version, content, callback) {
-      var fileName = url.replace(/\//g, '_')+'.'+version;
+    set: function(url, type, content, callback) {
+      var fileName = url.replace(/\//g, '_');
       this.fs.root.getFile(fileName, {create: true, exclusive: false}, function(fileEntry) {
         fileEntry.createWriter(function(writer) {
           writer.onwriteend = function() {
-            callback(fileEntry.toURL());
+            var data = {
+              url: url,
+              type: type,
+              content: content,
+              cache_url: fileEntry.toURL()
+            };
+            callback(data);
           };
-          writer.onerror = function() {
+          writer.onerror = function(e) {
+            if (debug) console.error('Error writing FileSystem', e);
             callback(undefined);
           }
           var blob = new Blob([content], {type: type});
@@ -225,12 +232,19 @@
         }
       });
     },
-    get: function(url, type, version, callback) {
-      var fileName = url.replace(/\//g, '_')+'.'+version;
+    get: function(url, type, callback) {
+      var fileName = url.replace(/\//g, '_');
       this.fs.root.getFile(fileName, {create: false, exclusive: false}, function(fileEntry) {
         if (fileEntry) {
-          callback(fileEntry.toURL());
+          var data = {
+            url: url,
+            type: type,
+            content: undefined,
+            cache_url: fileEntry.toURL()
+          };
+          callback(data);
         } else {
+          if (debug) console.error('Error getting FileSystem', e);
           callback(undefined);
         }
       }, function(e) {
@@ -241,67 +255,62 @@
           throw 'FileSystem Error';
         }
       });
-    },
-    clean: function(url, type, version) {
-      // TODO
     }
   };
 
   var idb = function(callback) {
     this.db = null;
-    this.version = 1;
+    this.version = 5;
     var req = indexedDB.open('PortableCache', this.version);
     req.onsuccess = (function(e) {
       if (debug) console.log('IndexedDB initialized');
       this.db = e.target.result;
       callback();
     }).bind(this);
-    req.onfailure = function(e) {
-      // TODO
+    req.onblocked = function(e) {
+      throw 'Opening IndexedDB blocked.'+e.target.errorCode;
+    };
+    req.onerror = function(e) {
+      throw 'Error on opening IndexedDB.'+e.target.errorCode;
     };
     req.onupgradeneeded = (function(e) {
       this.db = e.target.result;
       if (this.db.objectStoreNames.contains('cache')) {
         this.db.deleteObjectStore('cache');
       }
-      this.db.createObjectStore('cache', {keyPath: 'url'});
-      if (debug) console.log('upgraded Indexed database');
-      callback();
+      var store = this.db.createObjectStore('cache', {keyPath: 'url'});
+      if (debug) console.log('upgraded Indexed database', store);
     }).bind(this);
   };
   idb.prototype = {
-    set: function(url, type, version, content, callback) {
+    set: function(url, type, content, callback) {
       var data = {
         url:      url,
         type:     type,
-        version:  version,
         content:  content
       };
       var req = this.db.transaction(['cache'], 'readwrite').objectStore('cache').put(data);
       req.onsuccess = function(e) {
-        var blob = new Blob([content], {type: type});
-        callback(URL.createObjectURL(blob));
+        callback(data);
       };
       req.onerror = function(e) {
+        if (debug) console.error('Error writing IndexedDB', e);
         callback(false);
       }
     },
-    get: function(url, type, version, callback) {
+    get: function(url, type, callback) {
       var req = this.db.transaction(['cache'], 'readonly').objectStore('cache').get(url);
       req.onsuccess = function(e) {
         if (e.target.result) {
-          var blob = new Blob([e.target.result.content], {type: e.target.result.type});
-          callback(URL.createObjectURL(blob));
+          callback(e.target.result);
         } else {
           callback(undefined);
         }
       };
       req.onerror = function(e) {
+        if (debug) console.error('Error getting IndexedDB', e);
         callback(undefined);
       };
-    },
-    clean: function() {
-      // TODO
     }
   };
 
@@ -313,7 +322,6 @@
         transaction.executeSql('CREATE TABLE cache ('+
           'url         TEXT PRIMARY KEY, '+
           'type        TEXT, '+
-          'version     TEXT, '+
           'content     TEXT)');
       }, function(e) {
         // TODO Error
@@ -327,27 +335,31 @@
     }
   };
   sql.prototype = {
-    set: function(url, type, version, content, callback) {
-      var data = [url, type, version, content ];
+    set: function(url, type, content, callback) {
+      var data = [url, type, content ];
       this.db.transaction(function(transaction) {
-        transaction.executeSql('INSERT INTO cache (url, type, version, content) '+
-          'VALUES(?, ?, ?, ?)', data, function(transaction, results) {
-            console.log(results);
-            var blob = new Blob([content], {type: type});
-            callback(URL.createObjectURL(blob));
+        transaction.executeSql('INSERT INTO cache (url, type, content) '+
+          'VALUES(?, ?, ?)', data, function(transaction, results) {
+            var data = {
+              url: url,
+              type: type,
+              content: content
+            }
+            callback(data);
           }, function(e) {
-            // TODO Error
+            if (debug) console.error('Error writing WebSQL', e);
+            callback(undefined);
           });
       });
     },
-    get: function(url, type, version, callback) {
+    get: function(url, type, callback) {
       this.db.readTransaction(function(transaction) {
-        transaction.executeSql('SELECT * FROM cache WHERE url=? AND version=?', [url, version], function(transaction, results) {
+        transaction.executeSql('SELECT * FROM cache WHERE url=?', [url], function(transaction, results) {
           if (results.rows.length) {
             var data = results.rows.item(0);
-            var blob = new Blob([data.content], {type: data.type});
-            callback(URL.createObjectURL(blob));
+            callback(data);
           } else {
+            if (debug) console.error('Error getting WebSQL', e);
             callback(undefined);
           }
         }, function(e) {
@@ -356,9 +368,6 @@
       }, function(e) {
         // TODO Error
       });
-    },
-    clean: function() {
-      // TODO
     }
   };
 
@@ -366,29 +375,23 @@
     setTimeout(callback, 1);
   };
   ls.prototype = {
-    set: function(url, type, version, content, callback) {
+    set: function(url, type, content, callback) {
       var data = {
         url: url,
         type: type,
-        version: version,
         content: content
       };
       localStorage.setItem(url, JSON.stringify(data));
-      var blob = new Blob([content], {type: type});
-      callback(URL.createObjectURL(blob));
+      callback(data);
     },
-    get: function(url, type, version, callback) {
+    get: function(url, type, callback) {
       var data = localStorage.getItem(url);
       if (data) {
         data = JSON.parse(data);
-        var blob = new Blob([data.content], {type: data.type});
-        callback(URL.createObjectURL(blob));
+        callback(data);
       } else {
         callback(undefined);
       }
-    },
-    clean: function() {
-      // TODO
     }
   };
 

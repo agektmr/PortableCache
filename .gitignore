@@ -1,0 +1,9 @@
+.DS_Store
+*.log
+*.csv
+*.dat
+*.out
+*.pid
+node_modules
+*.sublime-*
+sftp-config.json
