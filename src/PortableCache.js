@@ -1,4 +1,4 @@
-(function() {
+var PortableCache = (function() {
   var debug   = true,
       cache   = null,
       storage = null;
@@ -137,11 +137,13 @@
 
     createElement: function(link, data) {
       var elem = null;
+      var isBlob = false;
 
       if (!data.cache_url) {
         if (Blob && URL) {
           var blob = new Blob([data.content], {type: data.type});
           data.cache_url = URL.createObjectURL(blob);
+          isBlob = true;
 
         // Are there still browsers with BlobBuilder support?
         } else if (window.BlobBuilder && URL) {
@@ -149,6 +151,7 @@
           bb.append(data.content);
           var blob = bb.getBlob(data.type);
           data.cache_url = URL.createObjectURL(blob);
+          isBlob = true;
 
         // Inline content in the worst case
         } else if (data.content) {
@@ -188,6 +191,13 @@
         default:
           throw 'cachable link type not specified or unrecognizable';
           break;
+      }
+
+      if (isBlob) {
+        elem.onload = function() {
+          if (debug) console.log('revoked object url', data.cache_url);
+          URL.revokeObjectURL(data.cache_url);
+        }
       }
 
       // elem.setAttribute('title',  link.href);
@@ -337,11 +347,11 @@
         // TODO Error
       }, function() {
         if (debug) console.log('WebSQL Database upgraded');
-        setTimeout(callback, 1);
+        setTimeout(callback, 0);
       });
     } else {
       if (debug) console.log('WebSQL Database initialized');
-      setTimeout(callback, 1);
+      setTimeout(callback, 0);
     }
   };
   sql.prototype = {
@@ -382,7 +392,7 @@
   };
 
   var ls = function(callback) {
-    setTimeout(callback, 1);
+    setTimeout(callback, 0);
   };
   ls.prototype = {
     set: function(url, type, content, callback) {
@@ -391,17 +401,21 @@
         type: type,
         content: content
       };
-      localStorage.setItem(url, JSON.stringify(data));
-      callback(data);
+      setTimeout(function() {
+        localStorage.setItem(url, JSON.stringify(data));
+        callback(data);
+      }, 0);
     },
     get: function(url, type, callback) {
-      var data = localStorage.getItem(url);
-      if (data) {
-        data = JSON.parse(data);
-        callback(data);
-      } else {
-        callback(undefined);
-      }
+      setTimeout(function() {
+        var data = localStorage.getItem(url);
+        if (data) {
+          data = JSON.parse(data);
+          callback(data);
+        } else {
+          callback(undefined);
+        }
+      }, 0);
     }
   };
 

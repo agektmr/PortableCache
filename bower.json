@@ -1,0 +1,10 @@
+{
+  "name": "PortableCache.js",
+  "version": "0.0.1",
+  "main": "src/PortableCache.js",
+  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/agektmr/PortableCache.js"
+  }
+}
