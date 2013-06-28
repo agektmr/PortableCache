@@ -5,10 +5,6 @@ Cache assets, reduce downloads, load faster.
 All you have to do is to insert tags like following:  
 
 ````
-    <meta name="cache-version" content="20130510">  
-    <link rel="cachable" href="css/bootstrap.css" type="text/css">  
-    <link rel="cachable" href="js/bootstrap.js" type="text/javascript">  
-    <script src="js/PortableCache.js"></script>
     // declare global cache version using meta[name=”cache-version”]
     <meta name="cache-version" content="20130627">
     // declare preferred storage to use [file-system, idb, sql, localstorage]
