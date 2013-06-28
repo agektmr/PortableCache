@@ -64,7 +64,7 @@ $d = ($_GET['cm'] == 'pcache' || $_GET['cm'] == null) ? false : true;
         <p>In declarative mode, everything else will be taken care of by PortableCache.js.</p>
 
         <h2>What does it do?</h2>
-        <p>PortableCache.js automatically caches all resources indicated as <code>cachable</code> to the best available storage in user's browser.<br/>
+        <p>PortableCache.js automatically caches intended resources to the best possible storage in user's browser.<br/>
         Supported storages ordered in priority:</p>
         <ol>
           <li>FileSystem</li>
