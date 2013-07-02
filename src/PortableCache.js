@@ -232,12 +232,15 @@ var PortableCache = (function() {
     createCache: function(url, type, content, status, version, callback, errorCallback) {
       var method = 'set';
 
-      // If cache exists, "update" instead of "insert" for WebSQL
+      // If cache exists, "update" instead of "insert" only if WebSQL
       if (this.cache_exists && storage instanceof sql) {
         method = 'update';
       }
-      // If received content is Blob and not using FileSystem, convert it to DataURL
+      // If received content is Blob and storage is not FileSystem, convert it to DataURL
       if (isBlobType(this.type) && !(storage instanceof fileSystem)) {
+        // Since expected Blob is actually received as ArrayBuffer because of Android Browser bug,
+        // this needs to be converted to Blob
+        content = createBlob(content, this.type);
         var reader = new FileReader();
         reader.onload = (function(e) {
           content = e.target.result;
@@ -261,7 +264,8 @@ var PortableCache = (function() {
       var xhr = new XMLHttpRequest();
       xhr.open('GET', this.origin_url, true);
       if (isBlobType(this.type)) {
-        xhr.responseType = 'blob';
+        // Since Android browser doesn't support 'blob' type on XHR, we use 'arraybuffer' instead
+        xhr.responseType = 'arraybuffer';
       }
       xhr.onreadystatechange = (function() {
         if (xhr.readyState === 4) {
@@ -704,7 +708,7 @@ var PortableCache = (function() {
           };
           callback(data);
         }).bind(this), (function sqlOnTransactionError(e) {
-          errorCallback('['+url+'] Error writing WebSQL: '+e);
+          errorCallback('['+url+'] Error writing WebSQL: '+e.message);
         }).bind(this));
       }).bind(this));
     },
@@ -723,7 +727,7 @@ var PortableCache = (function() {
           };
           callback(data);
         }).bind(this), (function sqlOnTransactionError(t, e) {
-          errorCallback('['+url+'] Error updating WebSQL: '+e);
+          errorCallback('['+url+'] Error updating WebSQL: '+e.message);
         }).bind(this));
       }).bind(this));
     },
@@ -750,10 +754,10 @@ var PortableCache = (function() {
             errorCallback('['+url+'] Error getting WebSQL data.');
           }
         }).bind(this), (function sqlOnExecuteSqlError(e) {
-          errorCallback('['+url+'] Error getting WebSQL data: '+e);
+          errorCallback('['+url+'] Error getting WebSQL data: '+e.message);
         }).bind(this));
       }).bind(this), (function sqlOnReadTransactionError(e) {
-        errorCallback('['+url+'] Error getting WebSQL data: '+e);
+        errorCallback('['+url+'] Error getting WebSQL data: '+e.message);
       }).bind(this));
     }
   };

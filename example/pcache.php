@@ -35,7 +35,7 @@ $d = ($_GET['cm'] == 'pcache' || $_GET['cm'] == null) ? false : true;
   <body>
     <div class="container">
       <div class="hero-unit">
-        <h1 class="hidden-phone">ProtableCache.js</h1>
+        <h1 class="hidden-phone">PortableCache.js</h1>
         <p>Cache assets, reduce downloads, load faster.</p>
         <a href="http://github.com/agektmr/PortableCache.js" target="_blank" class="btn btn-primary">View on Github</a>
       </div>
