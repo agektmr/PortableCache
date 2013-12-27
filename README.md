@@ -222,8 +222,6 @@ NOT IMPLEMENTED YET.
         </div>
       </body>
 
-</html>
-
 # Imperative APIs
 
 For configuration, use `meta[name="portable-cache"]` explained at Declarative 
