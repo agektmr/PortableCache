@@ -1,0 +1,23 @@
+{
+  "name": "PortableCache.js",
+  "version": "0.0.1",
+  "description": "Cache assets, reduce downloads, load faster.",
+  "main": "Gruntfile.js",
+  "devDependencies": {
+    "grunt": "~0.4.1",
+    "grunt-contrib-concat": "~0.3.0",
+    "grunt-contrib-uglify": "~0.2.5",
+    "grunt-contrib-qunit": "~0.3.0",
+    "grunt-contrib-jshint": "~0.7.1",
+    "grunt-contrib-watch": "~0.5.3",
+    "grunt-bower-task": "~0.3.4",
+    "grunt-processhtml": "~0.2.5",
+    "grunt-jsdoc": "~0.4.2"
+  },
+  "scripts": {
+    "test": ""
+  },
+  "repository": "git@github.com:agektmr/PortableCache.js.git",
+  "author": "Eiji Kitamura (agektmr+github@gmail.com)",
+  "license": "Apache2.0"
+}

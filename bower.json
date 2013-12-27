@@ -6,5 +6,8 @@
   "repository": {
     "type": "git",
     "url": "git://github.com/agektmr/PortableCache.js"
+  },
+  "devDependencies": {
+    "bootstrap": "~3.0.3"
   }
 }

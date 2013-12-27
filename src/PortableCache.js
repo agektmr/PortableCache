@@ -1,810 +1,795 @@
-var PortableCache = (function() {
-  var debug       = true,
-      _useDataURL = false,
-      storage     = null;
+// (function(window, document, undefined) {
 
-  /**
-   * <meta name="cache-version" content="20130406">
-   * <meta name="cache-preferred-storage" content="file-system"> // sql, idb, localstorage
-   * <link rel="stylesheet" data-cache-href="..." data-cache-version="">
-   * <script data-cache-src="...">
-   */
+var config = {
+  'version':            '',
+  'responsive-image':   'no',
+  'preferred-storage':  'auto',
+  'declarative-mode':   'yes',
+  'inline-resource':    'no',
+  'debug-mode':         'no'
+};
 
-  var requestFileSystem = window.requestFileSystem ||
-                          window.webkitRequestFileSystem ||
-                          window.mozRequestFileSystem ||
-                          window.msRequestFileSystem ||
-                          undefined;
+var viewport = {
+  'width':          'device-width',
+  'height':         'device-height',
+  'initial-scale':  1,
+  'minimum-scale':  1,
+  'maximum-scale':  1,
+  'user-scalable':  'yes'
+};
 
-  var indexedDB         = window.indexedDB ||
-                          window.webkitIndexedDB ||
-                          window.mozIndexedDB ||
-                          window.msIndexedDB ||
-                          undefined;
+var storage = null,
+    debug   = false;
 
-  var webSQL            = window.openDatabase ||
-                          undefined;
+var SPACER_GIF = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
 
-  var localStorage      = window.localStorage ||
-                          undefined;
+var requestFileSystem = window.requestFileSystem ||
+                        window.webkitRequestFileSystem ||
+                        window.mozRequestFileSystem ||
+                        window.msRequestFileSystem ||
+                        undefined;
 
-  var Blob              = window.Blob ||
-                          window.WebKitBlob ||
-                          window.MozBlob ||
-                          window.MsBlob ||
-                          undefined;
+var indexedDB         = window.indexedDB ||
+                        window.webkitIndexedDB ||
+                        window.mozIndexedDB ||
+                        window.msIndexedDB ||
+                        undefined;
 
-  var BlobBuilder       = window.BlobBuilder ||
-                          window.WebKitBlobBuilder ||
-                          window.MozBlobBuilder ||
-                          window.MsBlobBuilder ||
-                          undefined;
+var openDatabase      = window.openDatabase ||
+                        undefined;
 
-  var URL               = window.URL ||
-                          window.webkitURL ||
-                          window.mozURL ||
-                          window.msURL ||
-                          window.oURL ||
-                          undefined;
+var localStorage      = window.localStorage ||
+                        undefined;
 
-  var createBlob = function(content, type) {
-    var blob = null;
-    // If Blob and URL are supported
-    if (Blob) {
-      try {
-        // Android browser fails here
-        blob = new Blob([content], {type: type});
-      } catch(e) {
-        var bb = new BlobBuilder();
-        bb.append(content);
-        blob = bb.getBlob(type);
-      }
-    // Are there still browsers with BlobBuilder support?
-    } else if (BlobBuilder) {
+var Blob              = window.Blob ||
+                        window.WebKitBlob ||
+                        window.MozBlob ||
+                        window.MsBlob ||
+                        undefined;
+
+var BlobBuilder       = window.BlobBuilder ||
+                        window.WebKitBlobBuilder ||
+                        window.MozBlobBuilder ||
+                        window.MsBlobBuilder ||
+                        undefined;
+
+var URL               = window.URL ||
+                        window.webkitURL ||
+                        window.mozURL ||
+                        window.msURL ||
+                        window.oURL ||
+                        undefined;
+
+/**
+ * Returns true if given string indicates binary type
+ * @param  String  type   HTML tag name
+ * @return Boolean        true if binary, false if not
+ */
+var isBinary = function(tag) {
+  return (/^(img|audio|video)/).test(tag);
+};
+
+/**
+ * Create Blob object with Android browser bug in mind.
+ * @param  {[type]} content [description]
+ * @param  {[type]} type    [description]
+ * @return {[type]}         [description]
+ */
+var createBlob = function(content, type) {
+  var blob = null;
+  // If Blob and URL are supported
+  if (Blob) {
+    try {
+      // Android browser fails here
+      blob = new Blob([content], {type: type});
+    } catch(e) {
       var bb = new BlobBuilder();
       bb.append(content);
       blob = bb.getBlob(type);
     }
-    return blob;
+  // Are there still browsers with BlobBuilder support?
+  } else if (BlobBuilder) {
+    var bb = new BlobBuilder();
+    bb.append(content);
+    blob = bb.getBlob(type);
+  }
+  return blob;
+};
+
+var addEventListenerFn = (window.document.addEventListener ?
+    function(element, type, fn) { element.addEventListener(type, fn); } :
+    function(element, type, fn) { element.attachEvent('on'+type, fn); });
+
+var removeEventListenerFn = (window.document.removeEventListener ?
+    function(element, type, fn) { element.removeEventListener(type, fn) } :
+    function(element, type, fn) { element.detachEvent('on'+type, fn); });
+
+// Refer: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/bind
+if (!Function.prototype.bind) {
+  Function.prototype.bind = function(oThis) {
+    if (typeof this !== 'function') {
+      throw new TypeError('Function.prototype.bind - what is trying to be bound is not callable');
+    }
+
+    var aArgs = Array.prototype.slice.call(arguments, 1),
+        fToBind = this,
+        fNOP = function() {},
+        fBound = function() {
+          return fToBind.apply(this instanceof fNOP && oThis ? this : oThis,
+            aArgs.concat(Array.prototype.slice.call(arguments)));
+        };
+    fNOP.prototype = this.prototype;
+    fBound.prototype = new fNOP();
+    return fBound;
   };
+}
 
-  var isBlobType = function(type) {
-    return type.match(/^(image|audio|video)/) ? true : false;
-  };
-
-  var CacheEntry = function(resource_url, version, elem) {
-    this.origin_url   = resource_url;
-    this.version      = version;
-    this.content      = '';
-    this.status       = '';
-    this.url          = '';
-    this.cache_exists = false;
-
-    this.elem = elem;
-    if (elem) {
-      this.type = elem.nodeName === 'LINK'    ? 'text/css' :
-                  elem.nodeName === 'SCRIPT'  ? 'text/javascript' :
-                  elem.nodeName === 'IMG'     ? 'image/*' :
-                  elem.nodeName === 'AUDIO'   ? 'audio/*' :
-                  elem.nodeName === 'VIDEO'   ? 'video/*' :
-                  undefined;
-    } else {
-      // Guess resource content type from url extension
-      switch (resource_url.substring(resource_url.lastIndexOf('.'))) {
-        case '.css':
-          this.type = 'text/css';
+// Refer: https://developer.mozilla.org/ja/docs/DOM/document.cookie
+var Cookies = {
+  getItem: function (sKey) {
+    if (!sKey || !this.hasItem(sKey)) { return null; }
+    return unescape(document.cookie.replace(new RegExp("(?:^|.*;\\s*)" + escape(sKey).replace(/[\-\.\+\*]/g, "\\$&") + "\\s*\\=\\s*((?:[^;](?!;))*[^;]?).*"), "$1"));
+  },
+  setItem: function (sKey, sValue, vEnd, sPath, sDomain, bSecure) {
+    if (!sKey || /^(?:expires|max\-age|path|domain|secure)$/i.test(sKey)) { return; }
+    var sExpires = "";
+    if (vEnd) {
+      switch (vEnd.constructor) {
+        case Number:
+          sExpires = vEnd === Infinity ? "; expires=Tue, 19 Jan 2038 03:14:07 GMT" : "; max-age=" + vEnd;
           break;
-
-        case '.js':
-          this.type = 'text/javascript';
+        case String:
+          sExpires = "; expires=" + vEnd;
           break;
-
-        case '.jpg':
-        case '.jpeg':
-          this.type = 'image/jpeg';
-          break;
-
-        case '.gif':
-          this.type = 'image/gif';
-          break;
-
-        case '.png':
-          this.type = 'image/png';
-          break;
-
-        case '.webp':
-          this.type = 'image/webp';
-          break;
-
-        case '.wav':
-          this.type = 'audio/wav';
-          break;
-
-        case '.mp3':
-          this.type = 'audio/mp3';
-          break;
-
-        case '.mp4':
-          this.type = 'video/mp4';
+        case Date:
+          sExpires = "; expires=" + vEnd.toGMTString();
           break;
       }
     }
+    document.cookie = escape(sKey) + "=" + escape(sValue) + sExpires + (sDomain ? "; domain=" + sDomain : "") + (sPath ? "; path=" + sPath : "") + (bSecure ? "; secure" : "");
+  },
+  removeItem: function (sKey, sPath) {
+    if (!sKey || !this.hasItem(sKey)) { return; }
+    document.cookie = escape(sKey) + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT" + (sPath ? "; path=" + sPath : "");
+  },
+  hasItem: function (sKey) {
+    return (new RegExp("(?:^|;\\s*)" + escape(sKey).replace(/[\-\.\+\*]/g, "\\$&") + "\\s*\\=")).test(document.cookie);
+  },
+  keys: /* optional method: you can safely remove it! */ function () {
+    var aKeys = document.cookie.replace(/((?:^|\s*;)[^\=]+)(?=;|$)|^\s*|\s*(?:\=[^;]*)?(?:\1|$)/g, "").split(/\s*(?:\=[^;]*)?;\s*/);
+    for (var nIdx = 0; nIdx < aKeys.length; nIdx++) { aKeys[nIdx] = unescape(aKeys[nIdx]); }
+    return aKeys;
+  }
+};
 
-    // no version, no cache
-    if (this.version === '') {
-      this.url = this.origin_url;
-      this.getElement();
-      throw '['+this.origin_url+'] version not specified. fallback to source origin url.';
-    }
-  };
-  CacheEntry.prototype = {
-    process: function() {
-      var that = this;
-      var errorCallback = function(e) {
-        // In any trouble, just fallback to simple "data-cache-url > url" replacement
-        if (debug) console.error(e);
-        console.log("[%s] this browser does't seem to support storage features.", that.origin_url);
-        that.url = that.origin_url;
-        that.getElement();
-      };
+/**
+ * Cache Entry
+ * @param {Object|HTMLElement} data   data object that 
+ */
+var CacheEntry = function(entry) {
+  this.content  = '';
+  this.mimetype = '';
+  this.src      = '';
+  if (entry instanceof HTMLElement) {
+    // If entry.elem exists, all properties will be derived from the element.
+    this.tag      = entry.nodeName.toLowerCase();
+    this.elem     = entry;
+    this.url      = entry.getAttribute('data-cache-url');
+    this.version  = entry.getAttribute('data-cache-version') || config['version'];
+    // TODO: What if lazyload supported natively?
+    this.lazyload = entry.getAttribute('lazyload') !== null ? true : false;
+  } else {
+    this.tag      = entry.tag;
+    this.elem     = null;
+    this.url      = entry.url;
+    this.version  = entry.version || config['version'];
+    this.lazyload = entry.lazyload !== undefined ? entry.lazyload : false;
+  }
 
-      // Load cache
-      this.loadCache(function(data) {
-        // If
-        // - no cache found
-        // - previous fetch failed
-        // - version is different
-        // go fetch and cache new resource
-        if (!data || (data.status !== 200 && data.status !== 304) || data.version !== that.version) {
-          // If the failure is permanent, just update
-          if (data && data.status === 0) {
-            if (debug) console.log('[%s] cache is permanently unavailable. replacing element.', that.origin_url);
-            that.url      = that.origin_url;
-            that.status   = data.status;
-            that.type     = data.type;
-            that.content  = data.content;
-            that.version  = data.version;
-            that.getElement();
-          } else {
-            if (debug) console.log('[%s] cache unavailable. fetching...', that.origin_url);
-            // Fetch and cache new resource
-            that.fetchAndCache(function(data) {
-              that.url      = data.url;
-              that.content  = data.content;
-              that.type     = data.type;
-              that.status   = data.status;
-
-              // Update element
-              if (debug) console.log('[%s] cache has been updated. replacing element.', that.origin_url);
-              that.getElement();
-
-            }, errorCallback);
-          }
-        } else {
-          // If cache is still valid, use them
-          if (debug) console.log('[%s] cache is still valid. replacing element.', that.origin_url);
-          that.url      = data.url;
-          that.status   = data.status;
-          that.type     = data.type;
-          that.content  = data.content;
-          that.version  = data.version;
-          that.getElement();
-        }
-      }, errorCallback);
-    },
-
-    loadCache: function(callback, errorCallback) {
-      if (storage) {
-        storage.get(this.origin_url, this.type, (function(data) {
-          // If cached content is DataURL converted from Blob, return it back to Blob
-          if (data) {
-            if (data.content && isBlobType(data.type) && !(storage instanceof fileSystem)) {
-              // use data url as actual url
-              if (_useDataURL) {
-                data.url = data.content;
-
-              // use blob url
-              } else {
-                var binary = atob(data.content.split(',')[1]);
-                var array = [];
-                for (var i = 0; i < binary.length; i++) {
-                  array.push(binary.charCodeAt(i));
-                }
-                data.content = createBlob(new Uint8Array(array), data.type);
-              }
-            }
-            // record cache existance for later WebSQL "update" purpose
-            this.cache_exists = true;
-          }
-          callback(data);
-        }).bind(this), errorCallback);
-      } else {
-        // Simplely move origin_url to url when storage is not available
-        if (debug) console.log('['+this.origin_url+'] storage not available.');
-        callback({
-          url:    this.origin_url,
-          type:   this.type,
-          status: 200
-        });
-      }
-    },
-
-    createCache: function(url, type, content, status, version, callback, errorCallback) {
-      var method = 'set';
-
-      // If cache exists, "update" instead of "insert" only if WebSQL
-      if (this.cache_exists && storage instanceof sql) {
-        method = 'update';
-      }
-      // If received content is Blob and storage is not FileSystem, convert it to DataURL
-      if (isBlobType(this.type) && !(storage instanceof fileSystem)) {
-        // Since expected Blob is actually received as ArrayBuffer because of Android Browser bug,
-        // this needs to be converted to Blob
-        content = createBlob(content, this.type);
-        var reader = new FileReader();
-        reader.onload = (function(e) {
-          content = e.target.result;
-          storage[method](url, type, content, status, version, callback, errorCallback);
-        }).bind(this);
-        reader.readAsDataURL(content);
-      } else {
-        storage[method](url, type, content, status, version, callback, errorCallback);
-      }
-    },
-
-    removeCache: function() {
-      storage.remove(this.origin_url);
-    },
-
-    getCachedUrl: function() {
-      return this.url;
-    },
-
-    fetchAndCache: function(callback, errorCallback) {
-      var xhr = new XMLHttpRequest();
-      xhr.open('GET', this.origin_url, true);
-      if (isBlobType(this.type)) {
-        // Since Android browser doesn't support 'blob' type on XHR, we use 'arraybuffer' instead
-        xhr.responseType = 'arraybuffer';
-      }
-      xhr.onreadystatechange = (function() {
-        if (xhr.readyState === 4) {
-          var content,
-              type = this.type;
-          if (xhr.status === 200 || xhr.status === 304) {
-            if (debug) console.log('['+this.origin_url+'] fetch succeeded.');
-            content = xhr.response;
-            // type = xhr.getResponseHeader('Content-Type');
-
-          } else if (xhr.status === 0) {
-            // replace status code with cross domain if it is
-            if (this.origin_url.indexOf(window.location.origin) === -1) {
-              console.error('XMLHttpRequest cannot load %s. '+
-                            'Origin %s is not allowed by Access-Control-Allow-Origin.',
-                            this.origin_url, window.location.origin);
-            } else {
-              console.error('XMLHttpRequest unknown error.');
-            }
-
-          } else {
-            console.error('XMLHttpRequest error:', xhr.status, this.origin_url);
-
-          }
-
-          this.createCache(this.origin_url, type, content, xhr.status, this.version, callback, errorCallback);
-        }
-      }).bind(this);
-      xhr.send();
-    },
-
-    getElement: function() {
-      var blob    = null;
-
-      var onloadHandler = function(e) {
-        if (this.url.indexOf('blob') === 0) {
-          if (debug) console.log('revoked object url', this.url);
-          URL.revokeObjectURL(this.url);
-        }
-        if (debug) console.log('resource loaded', this.origin_url);
-        if (window.performance) {
-          var loadingTime = window.performance.timing.navigationStart + window.performance.now()
-                            - window.performance.timing.requestStart;
-          console.log('loading time since requestStart:', loadingTime / 1000, 'sec');
-        }
-        if (console.timeStamp) {
-          console.timeStamp('resource loaded: '+this.origin_url);
-        }
-        if (typeof this.onload === 'function') this.onload();
-      };
-
-      if (this.url === '') {
-        blob = createBlob(this.content, this.type);
-
-        // In case both Blob nor URL aren't supported
-        if (blob === null || !URL) {
-          switch (this.type) {
-            case 'text/css':
-              var style = document.createElement('style');
-              style.textContent = this.content;
-              this.elem.parentNode.insertBefore(style, this.elem);
-              this.elem.parentNode.removeChild(this.elem);
-              break;
-
-            case 'text/javascript':
-              // async load yet in order: http://www.html5rocks.com/en/tutorials/speed/script-loading/
-              if (!this.elem) {
-                this.elem = document.createElement('script');
-              }
-              this.elem.async = false;
-              this.elem.textContent = this.content;
-              break;
-
-            default:
-              // case 'image/*':
-              if (this.type.indexOf('image') === 0) {
-                if (!this.elem) {
-                  this.elem = new Image();
-                }
-                this.elem.src = this.url;
-              } else {
-                throw 'cachable link type not specified or unrecognizable';
-              }
-          }
-          return this.elem;
-        }
-        this.url = URL.createObjectURL(blob);
-        this.elem.addEventListener('load', onloadHandler.bind(this));
-      }
-
-      // If url is specified, create <link href="..."> or <script src="...">
-      switch (this.type) {
-        case 'text/css':
-          if (!this.elem) {
-            this.elem = document.createElement('link');
-            this.elem.setAttribute('rel', 'stylesheet');
-            this.elem.setAttribute('type', this.type);
-          }
-          this.elem.setAttribute('href', this.url);
-          break;
-
-        case 'text/javascript':
-          if (!this.elem) {
-            this.elem = document.createElement('script');
-          }
-          this.elem.setAttribute('src', this.url);
-          break;
-
-        default:
-          // case 'image/*':
-          if (this.type.indexOf('image') === 0) {
-            if (!this.elem) {
-              this.elem = new Image();
-            }
-            this.elem.src = this.url;
-          } else {
-            throw 'cachable link type not specified or unrecognizable';
-          }
-      }
-      this.elem.addEventListener('load', onloadHandler.bind(this));
-      return this.elem;
-      // TODO: should I dealloc this object?
-    }
-  };
-
-  var PortableCache = function(preferredStorage, useDataURL) {
-    var that = this,
-        cvElem, psElem,
-        queryStrings = [
-          'link[data-cache-href]',
-          'script[data-cache-src]',
-          'img[data-cache-src]'
-        ];
-
-    if (document.querySelector) {
-      cvElem = document.querySelector('meta[name="cache-version"]');
-      psElem = document.querySelector('meta[name="cache-preferred-storage"]');
-      duElem = document.querySelector('meta[name="cache-use-data-url"]');
-    } else {
-      var metas = document.getElementsByTagName('meta');
-      for (var i = 0; i < metas.length; i++) {
-        var name = metas[i].getAttribute('name');
-        if (name === 'cache-version') {
-          cvElem = metas[i];
-        }
-        if (name === 'cache-preferred-storage') {
-          psElem = metas[i];
-        }
-        if (name === 'cache-use-data-url') {
-          duElem = metas[i];
-        }
-      }
-    }
-
-    this.entries = [];
-    this.newVersion = cvElem && cvElem.getAttribute('content') || '';
-    this.oldVersion = localStorage && localStorage.getItem('cache_version') || '';
-    this.preferredStorage = preferredStorage || psElem && psElem.getAttribute('content') || '';
-    _useDataURL = duElem && duElem.getAttribute('content') ? true : useDataURL || useDataURL;
-
-// TODO: What if preferred storage is not available ???
-    if (this.preferredStorage==='file-system' || (requestFileSystem && this.preferredStorage==='')) {
-      if (debug) console.log('FileSystem API is available');
-      storage = new fileSystem();
-
-    } else if (this.preferredStorage==='idb' || (indexedDB && this.preferredStorage==='')) {
-      if (debug) console.log('IndexedDB API is available');
-      storage = new idb();
-
-    } else if (this.preferredStorage==='sql' || (webSQL && this.preferredStorage==='')) {
-      if (debug) console.log('WebSQL Database is available');
-      storage = new sql();
-
-    } else if (this.preferredStorage==='localstorage' || (localStorage && this.preferredStorage==='')) {
-      if (debug) console.log('LocalStorage is available');
-      storage = new ls();
-
-    } else {
-      if (debug) console.log('None of storages are available. Fallback to simple attribute fix.');
-      window.addEventListener('DOMContentLoaded', (function() {
-        this.initialize(queryStrings);
+  if (this.tag === 'img') {
+    this.elem.src = SPACER_GIF;
+    // TODO: Determine size of image responsively
+  }
+};
+CacheEntry.prototype = {
+  load: function(callback, errorCallback) {
+    // If storage is not available, fallback
+    if (!storage) {
+      if (debug && console) console.log('[%s] storage is unavailable. falling back.', this.url);
+      this.constructDOM(callback);
+    // If previous version doesn't exist, fetch and construct;
+    } else if (!config['prev-version']) {
+      if (debug && console) console.log('[%s] no version found. fetching.', this.url);
+      this.fetch((function fetchResponse(data) {
+        this.src      = data.src;
+        this.content  = data.content;
+        this.mimetype = data.mimetype;
+        this.createCache(data);
+        this.constructDOM(callback);
+        if (debug && console) console.log('[%s] fetch succeeded. cached and loading.', this.url);
+      }).bind(this), (function fetchError() {
+        if (debug && console) console.log('[%s] fetch failed. falling back.', this.url);
+        this.constructDOM(callback);
       }).bind(this));
-      return;
-    }
+    } else {
+      this.readCache((function(data) {
+        // If cache doesn't exist
+        if (!data) {
+          this.fetch((function fetchResponse(data) {
+            this.content  = data.content;
+            this.mimetype = data.mimetype;
+            this.createCache(data);
+            this.constructDOM(callback);
+            if (debug && console) console.log('[%s] fetch succeeded. cached and loading.', this.url);
+          }).bind(this), (function fetchError() {
+            if (debug && console) console.log('[%s] fetch failed. falling back.', this.url);
+            this.contructDOM(callback);
+          }).bind(this));
 
-    // For header elements
-    storage.onready = function() {
-      that.initialize(queryStrings);
-
-      // For body elements
-      document.addEventListener('DOMContentLoaded', function() {
-        that.initialize([
-          'img[data-cache-src]'
-        ]);
-      });
-    };
-
-  };
-
-  PortableCache.prototype = {
-    initialize: function(queryStrings) {
-      try {
-        for (var i = 0; i < queryStrings.length; i++) {
-          var elems = [],
-              query = queryStrings[i];
-
-          // if document.querySelectorAll is supported
-          if (document.querySelectorAll) {
-            elems = document.querySelectorAll(query);
-
-          // for legacy browsers
-          } else {
-            var matches = query.match(/^(.*)\[(.*)\]$/);
-            var tags = document.getElementsByTagName(matches[1]);
-            for (var k = 0; k < tags.length; k++) {
-              if (tags[k].getAttribute(matches[2]) !== null) {
-                elems.push(tags[k]);
-              }
-            }
-            console.log(elems);
-          }
-
-          // loop through elements
-          for (var j = 0; j < elems.length; j++) {
-            var elem = elems[j];
-
-            // don't assume elem.dataset is available...
-            var resource_url = elem.getAttribute('data-cache-href') || elem.getAttribute('data-cache-src') || '';
-            var version = elem.getAttribute('data-cache-version') || this.newVersion;
-
-            try {
-              var cache = new CacheEntry(resource_url, version, elem);
-              cache.process();
-              this.entries.push(cache);
-            } catch(e) {
-              console.error(e);
-              continue;
-            }
-          }
-        }
-        localStorage && localStorage.setItem('cache_version', this.newVersion);
-      } catch (e) {
-        console.error(e);
-        throw e;
-      }
-    },
-
-    getEntries: function() {
-      return this.entries;
-    },
-
-    getEntryByUrl: function(url) {
-      for (var i = 0; i < this.entries.length; i++) {
-        if (this.entries[i].origin_url === url) {
-          return this.entries[i];
-        }
-      }
-      return undefined;
-    },
-
-    clearAllCache: function() {
-      for (var i = 0; i < this.entries.length; i++) {
-        this.entries[i].removeCache();
-      }
-    },
-
-    createCacheEntry: function(resource_url, version) {
-      new CacheEntry(resource_url, version);
-      return cache;
-    }
-  };
-
-  var fileSystem = function() {
-    this.fs = null;
-    requestFileSystem(TEMPORARY, 1024 * 1024, (function(fs) {
-      if (debug) console.log('FileSystem initialized');
-      this.fs = fs;
-      this.ls = new ls();
-      this.onready();
-    }).bind(this), function(e) {
-      throw 'Failed initializing FileSystem';
-    });
-  };
-  fileSystem.prototype = {
-    set: function(url, type, content, status, version, callback, errorCallback) {
-      var data = {
-        url:      url,
-        type:     type,
-        content:  content,
-        status:   status,
-        version:  version
-      }
-      // If response code is not 200 on fetch (such as cross domain, 404, 502),
-      // it's not possible to store status of the resource. Just simply skip storing
-      // phase.
-      if (status !== 200 && status !== 304) {
-        this.ls.set(url, type, url, status, version, callback);
-        return;
-      };
-
-      var fileName = url.replace(/\/|\./g, '_');
-      this.fs.root.getFile(fileName, {create: true, exclusive: false}, (function(fileEntry) {
-        fileEntry.createWriter((function(writer) {
-          writer.onwriteend = (function() {
-            this.ls.set(url, data.type, fileEntry.toURL(), data.status, data.version, function(data) {
-              data.url = fileEntry.toURL();
-              callback(data);
-            });
-          }).bind(this);
-
-          writer.onerror = (function(e) {
-            errorCallback('['+url+'] Error writing FileSystem: '+e);
-          }).bind(this);
-
-          var blob = new Blob([content], {type: type});
-          writer.write(blob);
-
-        }).bind(this));
-      }).bind(this), (function(e) {
-        errorCallback('['+url+'] Failed setting content: '+e);
-
-      }).bind(this));
-    },
-    get: function(url, type, callback, errorCallback) {
-      this.ls.get(url, type, (function(data) {
-        if (data) {
-          // fileSystem is using localStorage as metadata store
-          callback({
-            url:      data.content, // content indicates filesystem:// url
-            type:     data.type,
-            content:  undefined,
-            status:   data.status,
-            version:  data.version
-          });
+        // If cache exists
         } else {
-          callback(data);
+          // If cache is deprecated
+          if (data.version !== this.version) {
+            this.fetch((function fetchResponse(data) {
+              this.content  = data.content;
+              this.mimetype = data.mimetype;
+              this.createCache(data);
+              this.constructDOM(callback);
+              if (debug && console) console.log('[%s] fetch succeeded. cached and loading.', this.url);
+            }).bind(this), (function fetchError() {
+              if (debug && console) console.log('[%s] fetch failed. falling back.', this.url);
+              this.constructDOM(callback);
+            }).bind(this));
+          // If cache is still valid
+          } else {
+            this.src      = data.src || '';
+            this.content  = data.content || '';
+            this.mimetype = data.mimetype;
+            this.constructDOM(callback);
+            if (debug && console) console.log('[%s] cache found. loading.', this.url);
+          }
         }
       }).bind(this), errorCallback);
     }
+  },
+  readCache: function(callback, errorCallback) {
+    storage.get(this, callback, errorCallback);
+  },
+  createCache: function() {
+    var method = 'set';
+
+    // If cache exists, "update" instead of "insert" only if WebSQL
+    if (this.cache_exists && storage instanceof sql) {
+      method = 'update';
+    }
+
+    // At this point, this.content is either a text or an arraybuffer.
+    // If received content is Blob and storage is not FileSystem, convert it to DataURL
+    if (storage instanceof fileSystem) {
+      try {
+        storage.set(this);
+      } catch (e) {
+        throw e;
+      }
+    } else if (isBinary(this.tag)) {
+      // Convert to DataURL for storage purpose
+      var blob = createBlob(this.content, this.mimetype);
+      var reader = new FileReader();
+      reader.onload = (function(event) {
+        this.content = event.target.result;
+        try {
+          storage[method](this);
+        } catch (e) {
+          throw e;
+        }
+      }).bind(this);
+      reader.readAsDataURL(blob);
+    } else {
+      try {
+        storage[method](this);
+      } catch (e) {
+        throw e;
+      }
+    }
+  },
+  removeCache: function() {
+    storage.remove(this.url);
+  },
+  fetch: function(callback, errorCallback) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', this.url, true);
+    // Since Android browser doesn't support 'blob' type on XHR, we use 'arraybuffer' instead
+    xhr.responseType = isBinary(this.tag) ? 'arraybuffer' : 'text';
+    xhr.onreadystatechange = (function() {
+      if (xhr.readyState === 4) {
+        var data = {};
+        if (xhr.status === 200 || xhr.status === 304) {
+          data.mimetype = xhr.getResponseHeader('Content-Type').replace(/^(.*?);.*$/g, '$1');
+          data.content = xhr.response;
+        } else if (xhr.status === 0) {
+          // replace status code with cross domain if it is
+          if (this.url.indexOf(window.location.origin) === -1) {
+            errorCallback('XMLHttpRequest cannot load '+this.url+'. '+
+                  'Origin '+window.location.origin+' is not allowed by Access-Control-Allow-Origin.');
+          } else {
+            errorCallback('XMLHttpRequest unknown error.');
+          }
+        } else {
+          errorCallback('XMLHttpRequest error: '+xhr.status+' '+this.url);
+        }
+        callback(data);
+      }
+    }).bind(this);
+    xhr.send();
+  },
+  constructDOM: function(callback) {
+    // At this point, no `src` means either DataURL or text content
+    if (!this.src && this.content !== '') {
+      if (config['inline-resource'] === 'no') {
+        var blob;
+        // Convert DataURL into BlobURL 
+        if (typeof this.content == 'string' && this.content.indexOf('data') === 0) {
+          var binary = atob(this.content.split(',')[1]);
+          var array = Array.prototype.map.call(binary, function(char) {
+            return char.charCodeAt(0);
+          });
+          blob = createBlob(new Uint8Array(array), this.mimetype);
+        // Convert text content into BlobURL 
+        } else {
+          blob = createBlob(this.content, this.mimetype);
+        }
+        this.src = URL.createObjectURL(blob);
+        // Don't forget to revoke BlobURL
+        addEventListenerFn(this.elem, 'unload', (function domOnUnload() {
+          URL.revokeObjectURL(this.src);
+        }).bind(this));
+
+      // In case of `link` tag for inline, use `style` instead
+      } else if (this.tag === 'link') {
+        this.tag = 'style';
+      }
+    // No contents loaded. fallback
+    } else {
+      this.src = this.url;
+    }
+
+    if (this.tag) {
+      switch (this.tag) {
+        case 'audio':
+        case 'video':
+        case 'img':
+          this.elem.setAttribute('src', this.src || this.url);
+          break;
+        case 'script':
+          if (this.src) {
+            this.elem.setAttribute('src', this.src);
+          } else if (this.content) {
+            this.elem.textContent = this.content;
+          } else {
+            this.elem.setAttribute('src', this.url);
+          }
+          break;
+        case 'link':
+          this.elem.setAttribute('href', this.src || this.url);
+          break;
+        case 'style':
+          this.elem = document.createElement('style');
+          this.elem.textContent = this.content;
+          document.getElementsByTagName('head')[0].appendChild(this.elem);
+          break;
+      }
+      addEventListenerFn(this.elem, 'load', callback);
+    }
+  }
+};
+
+var CacheManager = function() {
+  this.entries = [];
+  this.lazyload = [];
+
+  /**
+   * Parse content of meta element separated by comma
+   * @param  String content   Content string to parse
+   * @param  {Object} obj     Object to override
+   * @return {Object}         Object overridden by parsed content
+   */
+  var parseMetaContent = function(content, obj) {
+    obj = obj || {};
+    var separate = content.split(/,\s*/g);
+    for (var j = 0; j < separate.length; j++) {
+      var matches = separate[j].split('=');
+      if (matches.length === 2) {
+        obj[matches[0]] = matches[1];
+      }
+    }
+    return obj;
   };
 
-  var idb = function() {
-    this.db = null;
-    this.version = 5;
-    var req = indexedDB.open('PortableCache', this.version);
-    req.onsuccess = (function(e) {
-      if (debug) console.log('IndexedDB initialized');
-      this.db = e.target.result;
-      this.onready();
-    }).bind(this);
-    req.onblocked = function(e) {
-      throw '['+url+'] Opening IndexedDB blocked.'+e.target.errorCode;
+  var onReady = (function() {
+    document.body.style.display = 'none';
+    this.queryElements(['link', 'script'], (function onStyleLoaded() {
+      document.body.style.display = 'block';
+      this.queryElements(['img', 'audio', 'video'], (function onMediaLoaded() {
+        // Set lazyload images
+        if (this.lazyload.length > 0) {
+          var onLazyload = (function() {
+            if (this.lazyload.length) {
+              this.loadLazyImages();
+            } else {
+              removeEventListenerFn(document, 'scroll', onLazyload);
+              if (debug && console) console.log('removed `document.onscroll` event');
+            }
+          }).bind(this);
+          addEventListenerFn(document, 'scroll', onLazyload);
+        }
+      }).bind(this));
+    }).bind(this));
+  }).bind(this);
+
+  // Load configuration and viewport
+  var _pcache = null, _viewport = null;
+  if (document.querySelectorAll) {
+    _pcache = document.querySelector('meta[name="portable-cache"]');
+    _viewport = document.querySelector('meta[name="viewport"]');
+  } else {
+    var metas = document.getElementsByTagName('meta');
+    for (var i = 0; i < metas.length; i++) {
+      var name = metas[i].getAttribute('name');
+      if (name === 'portable-cache') {
+        _pcache = metas[i];
+      }
+      if (name === 'viewport') {
+        _viewport = metas[i];
+      }
+    }
+  }
+  if (_pcache) {
+    parseMetaContent(_pcache.getAttribute('content'), config);
+  }
+  if (_viewport) {
+    parseMetaContent(_viewport.getAttribute('content'), viewport);
+  }
+
+  config['prev-version'] = Cookies.getItem('pcache_version');
+  Cookies.setItem('pcache_version', config['version']);
+  debug = config['debug-mode'] !== 'no' ? true : false;
+
+  if (debug && console) console.log('PortableCache config:', config);
+
+  var ps = config['preferred-storage'];
+  if (ps=='filesystem' || (requestFileSystem && ps=='auto')) {
+    if (debug && console) console.log('FileSystem API is available');
+    storage = new fileSystem();
+
+  } else if (ps=='idb' || (indexedDB && ps=='auto')) {
+    if (debug && console) console.log('IndexedDB API is available');
+    storage = new idb();
+
+  } else if (ps=='sql' || (openDatabase && ps=='auto')) {
+    if (debug && console) console.log('WebSQL Database is available');
+    storage = new sql();
+
+  } else if (ps=='localstorage' || (localStorage && ps=='auto')) {
+    if (debug && console) console.log('LocalStorage is available');
+    storage = new ls();
+
+  } else {
+    if (debug && console) console.log('None of storages are available. Fallback to simple attribute fix.');
+    addEventListenerFn(window, 'load', onReady);
+    return;
+  }
+
+  // Start when storage is ready
+  storage.onready = onReady;
+};
+
+CacheManager.prototype = {
+  queryElements: function(queryStrings, callback) {
+    var elems = [], i;
+    for (i = 0; i < queryStrings.length; i++) {
+      var query = queryStrings[i];
+
+      // if document.querySelectorAll is supported
+      if (document.querySelectorAll) {
+        elems = Array.prototype.concat.apply(elems, document.querySelectorAll(query+'[data-cache-url]'));
+
+      // for legacy browsers
+      } else {
+        var tags = document.getElementsByTagName(query);
+        for (var j = 0; j < tags.length; j++) {
+          if (tags[j].getAttribute('data-cache-url') !== null) {
+            elems.push(tags[j]);
+          }
+        }
+      }
+    }
+
+    // loop through elements
+    var count = 0, length = elems.length;
+    for (i = 0; i < elems.length; i++) {
+      var cache = new CacheEntry(elems[i]);
+      this.entries.push(cache);
+      if (cache.lazyload) {
+        this.lazyload.push(cache);
+        length--;
+      } else {
+        cache.load((function onCacheLoaded(cache) {
+          count++;
+          if (debug && console) console.log(cache.src, ' loaded.');
+          if (typeof callback === 'function' && count == length) callback();
+        }).bind(this, cache));
+      }
+    }
+    if (debug && console) console.log(elems);
+    if (typeof callback === 'function' && length === 0) callback();
+  },
+  loadLazyImages: function() {
+    var scrollY = window.pageYOffset || document.documentElement.scrollTop;
+    var pageHeight = window.innerHeight || document.documentElement.clientHeight;
+    var min = scrollY - (pageHeight/2);
+    var max = scrollY + ~(pageHeight*1.5);
+    for (var i = 0; i < this.lazyload.length; i++) {
+      var cache = this.lazyload[i];
+      var elemY = cache.elem.offsetTop;
+      var elemHeight = cache.elem.offsetHeight;
+      if (elemY+elemHeight >= min || elemY <= max) {
+        cache.load();
+        this.lazyload.splice(i--, 1);
+      }
+    }
+  },
+  getEntryByUrl: function(url) {
+    for (var i = 0; i < this.entries.length; i++) {
+      if (this.entries[i].url === url) {
+        return this.entries[i];
+      }
+    }
+    return undefined;
+  },
+  clearAllCache: function() {
+    for (var i = 0; i < this.entries.length; i++) {
+      this.entries[i].removeCache();
+    }
+  },
+  /**
+   * Returns PortableCache configuration
+   * @param  {String} property
+   * @return Configuration if available. Empty property argument will return config object.
+   */
+  getConfig: function(property) {
+    if (property === undefined) {
+      return config;
+    } else {
+      return config[property];
+    }
+  }
+};
+
+var fileSystem = function() {
+  this.fs = null;
+  requestFileSystem(TEMPORARY, 1024 * 1024, (function(fs) {
+    if (debug && console) console.log('FileSystem initialized');
+    this.fs = fs;
+    this.ls = new ls();
+    this.onready();
+  }).bind(this), function(e) {
+    throw 'Failed initializing FileSystem';
+  });
+};
+fileSystem.prototype = {
+  set: function(_data) {
+    var fileName = _data.url.replace(/\/|\./g, '_');
+    this.fs.root.getFile(fileName, {create: true, exclusive: false}, (function(fileEntry) {
+      // TODO: create custom directory
+      fileEntry.createWriter((function(writer) {
+        writer.onwriteend = (function() {
+          var data = {
+            url:      _data.url,
+            src:      fileEntry.toURL(),
+            mimetype: _data.mimetype,
+            version:  _data.version
+          };
+          this.ls.set(data);
+        }).bind(this);
+
+        writer.onerror = (function(e) {
+          throw '['+_data.url+'] Error writing FileSystem: '+e;
+        }).bind(this);
+
+        writer.write(createBlob(_data.content, _data.mimetype));
+
+      }).bind(this));
+    }).bind(this), (function(e) {
+      throw '['+url+'] Failed setting content: '+e;
+
+    }).bind(this));
+  },
+  get: function(_data, callback) {
+    this.ls.get(_data, callback);
+  },
+  remove: function(_data, callback) {
+    // TODO;
+  }
+};
+
+var idb = function() {
+  this.db = null;
+  this.version = 1;
+  var req = indexedDB.open('PortableCache', this.version);
+  req.onsuccess = (function(e) {
+    if (debug && console) console.log('IndexedDB initialized');
+    this.db = e.target.result;
+    this.onready();
+  }).bind(this);
+  req.onblocked = function(e) {
+    throw '['+url+'] Opening IndexedDB blocked.'+e.target.errorCode;
+  };
+  req.onerror = function(e) {
+    throw '['+url+'] Error on opening IndexedDB.'+e.target.errorCode;
+  };
+  req.onupgradeneeded = (function(e) {
+    this.db = e.target.result;
+    if (this.db.objectStoreNames.contains('cache')) {
+      this.db.deleteObjectStore('cache');
+    }
+    var store = this.db.createObjectStore('cache', {keyPath: 'url'});
+    if (debug && console) console.log('upgraded Indexed database', store);
+  }).bind(this);
+};
+idb.prototype = {
+  set: function(_data) {
+    // TODO: Store Blob if Firefox?
+    var data = {
+      url:      _data.url,
+      content:  _data.content,
+      mimetype: _data.mimetype,
+      version:  _data.version
+    };
+    var req = this.db.transaction(['cache'], 'readwrite').objectStore('cache').put(data);
+    req.onsuccess = function(e) {
+      // Do nothing
     };
     req.onerror = function(e) {
-      throw '['+url+'] Error on opening IndexedDB.'+e.target.errorCode;
-    };
-    req.onupgradeneeded = (function(e) {
-      this.db = e.target.result;
-      if (this.db.objectStoreNames.contains('cache')) {
-        this.db.deleteObjectStore('cache');
-      }
-      var store = this.db.createObjectStore('cache', {keyPath: 'url'});
-      if (debug) console.log('upgraded Indexed database', store);
-    }).bind(this);
-  };
-  idb.prototype = {
-    set: function(url, type, content, status, version, callback, errorCallback) {
-      var data = {
-        url:      url,
-        type:     type,
-        content:  content,
-        status:   status,
-        version:  version
-      };
-      var req = this.db.transaction(['cache'], 'readwrite').objectStore('cache').put(data);
-      req.onsuccess = function(e) {
-        // make sure 'url' is updated to storage but callback as empty string
-        data.url = '';
+      throw '['+_data.url+'] Error writing IndexedDB: '+e;
+    }
+  },
+  get: function(_data, callback) {
+    var req = this.db.transaction(['cache'], 'readonly').objectStore('cache').get(_data.url);
+    req.onsuccess = function(e) {
+      if (e.target.result) {
+        var data = e.target.result;
+        // make sure 'url' callbacks as empty string
         callback(data);
-      };
-      req.onerror = function(e) {
-        errorCallback('['+url+'] Error writing IndexedDB: '+e);
+      } else {
+        callback(null);
       }
-    },
-    get: function(url, type, callback, errorCallback) {
-      var req = this.db.transaction(['cache'], 'readonly').objectStore('cache').get(url);
-      req.onsuccess = function(e) {
-        if (e.target.result) {
-          var data = e.target.result;
-          // make sure 'url' callbacks as empty string
-          data.url = '';
+    };
+    req.onerror = function(e) {
+      throw '['+_data.url+'] Error getting IndexedDB: '+e;
+    };
+  },
+  remove: function(_data, callback) {
+    // TODO;
+  }
+};
+
+var sql = function() {
+  this.db = openDatabase('PortableCache', '', 'cache', 1024 * 1024);
+  this.version = '1.0';
+  if (this.db.version !== this.version) {
+    this.db.changeVersion(this.db.version, this.version, (function sqlOnChangeVersion(transaction) {
+      transaction.executeSql('CREATE TABLE cache ('+
+        'url         TEXT PRIMARY KEY, '+
+        'content     TEXT, '+
+        'mimetype    TEXT, '+
+        'version     TEXT)');
+      this.onready();
+    }).bind(this), (function sqlOnChangeVersionError(e) {
+      throw 'Failed changing WebSQL version.';
+    }).bind(this), (function sqlOnChangeVersionUpgraded() {
+      if (debug && console) console.log('WebSQL Database upgraded.');
+    }).bind(this));
+  } else {
+    if (debug && console) console.log('WebSQL Database initialized.');
+    setTimeout((function() {
+      this.onready();
+    }).bind(this), 0);
+  }
+};
+sql.prototype = {
+  set: function(_data) {
+    var data = [ _data.url, _data.content, _data.mimetype, _data.version ];
+    this.db.transaction((function sqlOnTransaction(transaction) {
+      transaction.executeSql('INSERT INTO cache (url, content, mimetype, version) '+
+          'VALUES(?, ?, ?, ?)', data, (function sqlOnExecuteSql(transaction, results) {
+      }).bind(this), (function sqlOnTransactionError(e) {
+        throw '['+_data.url+'] Error writing WebSQL: '+e.message;
+      }).bind(this));
+    }).bind(this));
+  },
+  update: function(_data) {
+    var data = [_data.mimetype, _data.content, _data.version, _data.url ];
+    this.db.transaction((function sqlOnTransaction(transaction) {
+      transaction.executeSql('UPDATE cache SET mimetype=?, content=?, version=? '+
+          'WHERE url=?', data, (function sqlOnExecuteSql(transaction, results) {
+      }).bind(this), (function sqlOnTransactionError(t, e) {
+        throw '['+_data.url+'] Error updating WebSQL: '+e.message;
+      }).bind(this));
+    }).bind(this));
+  },
+  get: function(_data, callback, errorCallback) {
+    this.db.readTransaction((function sqlOnReadTransaction(transaction) {
+      transaction.executeSql('SELECT * FROM cache WHERE url=?', [_data.url],
+          (function sqlOnExecuteSql(transaction, results) {
+        if (results.rows.length > 0) {
+          var result = results.rows.item(0);
+          // copy result since you can't change it as it is
+          var data = {
+            url:      _data.url,
+            content:  result.content,
+            mimetype: result.mimetype,
+            version:  result.version
+          };
           callback(data);
-        } else {
+
+        } else if (results.rows.length === 0) {
           callback(null);
+
+        } else {
+          throw '['+_data.url+'] Error getting WebSQL data.';
         }
-      };
-      req.onerror = function(e) {
-        errorCallback('['+url+'] Error getting IndexedDB: '+e);
-      };
-    }
-  };
-
-  var sql = function() {
-    this.db = openDatabase('PortableCache', '', 'cache', 1024 * 1024);
-    this.version = '2.0';
-    if (this.db.version !== this.version) {
-      this.db.changeVersion(this.db.version, this.version, (function sqlOnChangeVersion(transaction) {
-        transaction.executeSql('CREATE TABLE cache ('+
-          'url         TEXT PRIMARY KEY, '+
-          'type        TEXT, '+
-          'content     TEXT, '+
-          'status      INTEGER, '+
-          'version     TEXT)');
-        this.onready();
-      }).bind(this), (function sqlOnChangeVersionError(e) {
-        throw 'Failed changing WebSQL version.';
-      }).bind(this), (function sqlOnChangeVersionUpgraded() {
-        if (debug) console.log('WebSQL Database upgraded.');
+      }).bind(this), (function sqlOnExecuteSqlError(e) {
+        throw '['+_data.url+'] Error getting WebSQL data: '+e.message;
       }).bind(this));
-    } else {
-      if (debug) console.log('WebSQL Database initialized.');
-      setTimeout((function() {
-        this.onready();
-      }).bind(this), 0);
-    }
-  };
-  sql.prototype = {
-    set: function(url, type, content, status, version, callback, errorCallback) {
-      var data = [url, type, content, status, version ];
-      this.db.transaction((function sqlOnTransaction(transaction) {
-        transaction.executeSql('INSERT INTO cache (url, type, content, status, version) '+
-            'VALUES(?, ?, ?, ?, ?)', data, (function sqlOnExecuteSql(transaction, results) {
-          // make sure 'url' is updated to storage but callback as empty string
-          data = {
-            url:      '',
-            type:     type,
-            content:  content,
-            status:   status,
-            version:  version
-          };
-          callback(data);
-        }).bind(this), (function sqlOnTransactionError(e) {
-          errorCallback('['+url+'] Error writing WebSQL: '+e.message);
-        }).bind(this));
-      }).bind(this));
-    },
-    update: function(url, type, content, status, version, callback, errorCallback) {
-      var data = [type, content, status, version, url ];
-      this.db.transaction((function sqlOnTransaction(transaction) {
-        transaction.executeSql('UPDATE cache SET type=?, content=?, status=?, version=? '+
-            'WHERE url=?', data, (function sqlOnExecuteSql(transaction, results) {
-          // make sure 'url' is updated to storage but callback as empty string
-          data = {
-            url:      '',
-            type:     type,
-            content:  content,
-            status:   status,
-            version:  version
-          };
-          callback(data);
-        }).bind(this), (function sqlOnTransactionError(t, e) {
-          errorCallback('['+url+'] Error updating WebSQL: '+e.message);
-        }).bind(this));
-      }).bind(this));
-    },
-    get: function(url, type, callback, errorCallback) {
-      this.db.readTransaction((function sqlOnReadTransaction(transaction) {
-        transaction.executeSql('SELECT * FROM cache WHERE url=?', [url],
-            (function sqlOnExecuteSql(transaction, results) {
-          if (results.rows.length > 0) {
-            var _data = results.rows.item(0);
-            // copy result since you can't change it as it is
-            var data = {
-              url:      '',
-              type:     _data.type,
-              content:  _data.content,
-              status:   _data.status,
-              version:  _data.version
-            };
-            callback(data);
+    }).bind(this), (function sqlOnReadTransactionError(e) {
+      throw '['+_data.url+'] Error getting WebSQL data: '+e.message;
+    }).bind(this));
+  },
+  remove: function(_data, callback) {
+    // TODO;
+  }
+};
 
-          } else if (results.rows.length === 0) {
-            callback(null);
-
-          } else {
-            errorCallback('['+url+'] Error getting WebSQL data.');
-          }
-        }).bind(this), (function sqlOnExecuteSqlError(e) {
-          errorCallback('['+url+'] Error getting WebSQL data: '+e.message);
-        }).bind(this));
-      }).bind(this), (function sqlOnReadTransactionError(e) {
-        errorCallback('['+url+'] Error getting WebSQL data: '+e.message);
-      }).bind(this));
-    }
-  };
-
-  var ls = function() {
-    var that = this;
-    setTimeout(function() {
-      if (typeof that.onready === 'function') that.onready();
+var ls = function() {
+  setTimeout((function() {
+    if (typeof this.onready === 'function') this.onready();
+  }).bind(this), 0);
+};
+ls.prototype = {
+  set: function(_data) {
+    var data = {
+      src:      _data.src || '',
+      content:  _data.content || '',
+      mimetype: _data.mimetype,
+      version:  _data.version
+    };
+    setTimeout(function localStorageSet() {
+      try {
+        localStorage.setItem(_data.url, JSON.stringify(data));
+      } catch(e) {
+        throw '['+_data.url+'] Error setting LocalStorage data: '+e;
+      }
     }, 0);
-  };
-  ls.prototype = {
-    set: function(url, type, content, status, version, callback, errorCallback) {
-      var data = {
-        url:      url,
-        type:     type,
-        content:  content,
-        status:   status,
-        version:  version
-      };
-      setTimeout(function localStorageSet() {
-        try {
-          localStorage.setItem(url, JSON.stringify(data));
-          // make sure 'url' is set to storage but callback as empty string
-          data.url = '';
-          callback(data);
-        } catch(e) {
-          errorCallback('['+url+'] Error setting LocalStorage data: '+e);
+  },
+  get: function(_data, callback) {
+    setTimeout(function localStorageGet() {
+      try {
+        var data = localStorage.getItem(_data.url) || null;
+        if (data) {
+          data = JSON.parse(data);
         }
-      }, 0);
-    },
-    get: function(url, type, callback, errorCallback) {
-      setTimeout(function localStorageGet() {
-        try {
-          var data = localStorage.getItem(url);
-          if (data) {
-            data = JSON.parse(data);
-            // make sure 'url' callbacks as empty string
-            data.url = '';
-          }
-          callback(data);
-        } catch(e) {
-          errorCallback('['+url+'] Error getting LocalStorage data: '+e);
-        }
-      }, 0);
-    }
-  };
+        callback(data);
+      } catch(e) {
+        throw '['+_data.url+'] Error getting LocalStorage data: '+e;
+      }
+    }, 0);
+  },
+  remove: function(_data, callback) {
+    // TODO;
+  }
+};
 
-  return new PortableCache();
+window.CacheEntry = CacheEntry;
+window.CacheManager = new CacheManager();
 
-})();
+// })(window, document);

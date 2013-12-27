@@ -4,6 +4,9 @@
 *.dat
 *.out
 *.pid
+bower_components
 node_modules
 *.sublime-*
 sftp-config.json
+dist
+README.html

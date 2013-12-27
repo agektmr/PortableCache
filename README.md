@@ -1,51 +1,236 @@
 # PortableCache.js
+
 Cache assets, reduce downloads, load faster.
 
-## How to use
-All you have to do is to insert tags like following:  
+# What is PortableCache.js?
 
-````
-    // declare global cache version using meta[name=”cache-version”]
-    <meta name="cache-version" content="20130627">
-    // declare preferred storage to use [file-system, idb, sql, localstorage]
-    // without this tag will automatically choose best possible storage
-    <meta name="cache-preferred-storage" content="sql">
-    // use DataURL instead of ObjectURL using Blob for Blob resources
-    // such as image, audio, video
-    <meta name="cache-use-data-url" content="true">
-    // adding “data-cache-src” or “data-cache-href” attribute will
-    // declaratively fetch and replace the tag with cache content if possible
-    // request declaration.
-    <script data-cache-src="js/bootstrap.js" data-cache-version="20130627">
-    <link rel="stylesheet" data-cache-href="css/bootstrap.css" type="text/css">
-    <img data-cache-src="img/121404791_e6a2afda06_b.jpg" />
-    // “data-cache-version” attribute gives resource specific cache version.
-    // this enables users to avoid updating whole assets.
-    <script data-cache-src="js/bootstrap.js" data-cache-version="20130623">
-    // finally, add PortableCache.js link after scripts declaration.
-    <script src="js/PortableCache.js"></script>
-````
+PortableCache.js (PCache) is a resource loader with mobile browsers in mind.
 
-Everything else will be taken care of by PortableCache.js.
+* Declarative APIs.
+* Uses the best available storage on user's browser:
+    * FileSystem
+    * IndexedDB
+    * WebSQL
+    * LocalStorage
+* Falls back gracefully when storage is not available.
+* Supports lazyload image.
+* Supports responsive images (NOT IMPLEMENTED YET).
 
-## What does it do?
-PortableCache.js automatically caches all resources indicated as ```cachable``` to the best available storage in user's browser.  
-Supported storages ordered in priority:
+# Demo
 
-1. FileSystem
-2. IndexedDB
-3. WebSQL DB
-4. LocalStorage
+[http://demo.agektmr.com/PortableCache/example/](http://demo.agektmr.com/PortableCache/example/)
 
-Confirmed it works on:
+# Quick Start
 
-* Chrome Desktop, Android, iOS
-* Firefox Desktop, Android
-* Opera Desktop (latest), Android (latest)
-* Safari Desktop (latest), iOS (latest)
+You can quickly try out this library by following 3 steps.
 
-## Current Status
-Under development.
+1. Insert following `meta` tag to your existing project's `head` tag.<br/>
+   `<meta name="portable-cache" content="version=20131228">`
+1. Insert `script` tag to load PortableCache.js (Make sure it is below 
+   `meta[name=""portable-cache]`).<br/>
+   `<script 
+   src="https://raw.github.com/agektmr/PortableCache.js/master/src/PortableCache.js">`
+1. Replace attribute name of resources you'd like to cache to 
+   `data-cache-url`.<br/>
+   `<img src="img/image.jpg">`<br/>
+   `<img data-cache-url="img/image.jpg">`
 
-## Author
-* Eiji Kitamura ([+agektmr](http://google.com/+agektmr), [@agektmr](http://twitter.com/agektmr))
+# Configuration API
+
+Configuration is set by using `meta[name="portable-cache"]`. The `content` 
+attribute accepts comma separated parameters as listed below.
+
+    <meta name="portable-cache" content="version=20130627, preferred-storage=localstorage, debug-mode=yes, responsive-image=yes, declarative-mode=yes, inline-resource=yes">
+
+<table>
+<tr>
+<td markdown="block">
+**Key**
+</td>
+<td markdown="block">
+**Value**
+</td>
+<td markdown="block">
+**Default**
+</td>
+<td markdown="block">
+
+</td>
+</tr>
+<tr>
+<td markdown="block">
+    version
+</td>
+<td markdown="block">
+    string
+</td>
+<td markdown="block">
+    ''
+</td>
+<td markdown="block">
+Required. String that indicates current version. If this differs from cookie 
+stored previous version, resources will be updated.
+</td>
+</tr>
+<tr>
+<td markdown="block">
+    preferred-storage
+</td>
+<td markdown="block">
+    (auto|filesystem|idb|sql|localstorage)
+</td>
+<td markdown="block">
+    'auto'
+</td>
+<td markdown="block">
+Optional. Preferred storage to use. If the preferred storage is not available on 
+the browser, PCache gracefully falls back.
+</td>
+</tr>
+<tr>
+<td markdown="block">
+    inline-resource
+</td>
+<td markdown="block">
+    (yes|no)
+</td>
+<td markdown="block">
+    'no'
+</td>
+<td markdown="block">
+Optional. Fetched resources will be inlined in HTML if 'yes'.
+</td>
+</tr>
+<tr>
+<td markdown="block">
+    declarative-mode
+</td>
+<td markdown="block">
+    (yes|no)
+</td>
+<td markdown="block">
+    'yes'
+</td>
+<td markdown="block">
+Optional. Indicates if developer wants to use this in imperative mode if 'no'.  
+THIS FEATURE NEEDS MORE WORK.
+</td>
+</tr>
+<tr>
+<td markdown="block">
+    responsive-image
+</td>
+<td markdown="block">
+    (yes|no)
+</td>
+<td markdown="block">
+    'no'
+</td>
+<td markdown="block">
+Optional. Indicates if images should load responsive images.  
+THIS FEATURE NEEDS MORE WORK.
+</td>
+</tr>
+<tr>
+<td markdown="block">
+    debug-mode
+</td>
+<td markdown="block">
+    (yes|no)
+</td>
+<td markdown="block">
+    'no'
+</td>
+<td markdown="block">
+Optional. Enables debug messages in console if 'yes'
+</td>
+</tr>
+</table>
+
+# Declarative APIs
+## Caching and loading resources
+
+All you have to do is to replace attributes that indicates URL of the resource 
+to `data-cache-url`.
+
+### script
+
+    <script data-cache-url="js/main.js"></script>
+
+### link
+
+    <link data-cache-url="css/style.css">
+
+### img
+
+    <img data-cache-url="img/image.jpg">
+
+## Per element versioning
+
+You may want to retain version of certain cached elements. These versions will 
+override global version specified in `meta[name="portable-cache"]`.  
+<img data-cache-url="img/image.jpg" data-cache-version="20131228">
+
+## Lazyload images
+
+You can defer loading of images until user actually see them in viewport by 
+adding `lazyload` attribute.  
+<img data-cache-url="img/image.jpg" lazyload>
+
+## Responsive images
+
+You can load responsive image by using `src-set` semantics to 
+`img[data-cache-url]`.  
+NOT IMPLEMENTED YET.
+
+## Example
+
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>PortableCache Example</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+        <meta name="portable-cache" content="version=20130630">
+        <link rel="stylesheet" data-cache-url="css/bootstrap.css">
+        <link rel="stylesheet" data-cache-url="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.2/jquery.min.js">
+        <script src="js/PortableCache.js"></script>
+      </head>
+      <body>
+        <div class="navbar">
+          <div class="navbar-inner">
+            <div class="container">
+              <span class="brand">PortableCache.js</span>
+            </div>
+          </div>
+        </div>
+
+    ...........snip..............
+
+            <h2>Current Status</h2>
+            <p>Under development. Very early stage.</p>
+            <h2>Example Image Stabs</h2>
+            <img data-cache-url="img/121404791_e6a2afda06_b.jpg" alt="">
+            <img data-cache-url="img/3672537740_7a1a3e63fd_b.jpg" alt="">
+            <img data-cache-url="img/4316514826_81562d1207_b.jpg" alt="">
+            <img data-cache-url="img/4453502862_e9999a219e_b.jpg" alt="">
+            <h2>Author</h2>
+            <ul>
+              <li>Eiji Kitamura (<a href="http://google.com/+agektmr" target="_blank">+agektmr</a>, <a href="http://twitter.com/agektmr" target="_blank">@agektmr</a>)</li>
+            </ul>
+          </div>
+        </div>
+      </body>
+
+</html>
+
+# Imperative APIs
+
+For configuration, use `meta[name="portable-cache"]` explained at Declarative 
+APIs.
+
+## TBD
+# Author
+
+* Eiji Kitamura ([+agektmr](https://google.com/+agektmr), 
+  [@agektmr](https://twitter.com/agektmr))
