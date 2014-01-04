@@ -1,11 +1,8 @@
-// (function(window, document, undefined) {
-
+(function() {
 var config = {
   'version':            '',
   'responsive-image':   'no',
   'preferred-storage':  'auto',
-  'declarative-mode':   'yes',
-  'inline-resource':    'no',
   'debug-mode':         'no'
 };
 
@@ -19,7 +16,9 @@ var viewport = {
 };
 
 var storage = null,
-    debug   = false;
+    debug   = false,
+    // Workaround for ~IE8
+    console = typeof console !== 'undefined' ? console : false;
 
 var SPACER_GIF = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
 
@@ -60,6 +59,29 @@ var URL               = window.URL ||
                         window.oURL ||
                         undefined;
 
+var base64encode = function(s) {
+  var base64list = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+  var t = '', p = -6, a = 0, i = 0, v = 0, c;
+  s = s.join('');
+
+  while ((i < s.length) || (p > -6)) {
+    if (p < 0) {
+      if (i < s.length) {
+        c = s.charCodeAt(i++);
+        v += 8;
+      } else {
+        c = 0;
+      }
+      a = ((a&255)<<8)|(c&255);
+      p += 8;
+    }
+    t += base64list.charAt((v > 0) ? (a>>p)&63 : 64);
+    p -= 6;
+    v -= 6;
+  }
+  return t;
+};
+
 /**
  * Returns true if given string indicates binary type
  * @param  String  type   HTML tag name
@@ -77,7 +99,10 @@ var isBinary = function(tag) {
  */
 var createBlob = function(content, type) {
   var blob = null;
-  // If Blob and URL are supported
+  if (content instanceof Blob) {
+    return content;
+  }
+  // If content is ArrayBuffer and Blob are supported
   if (Blob) {
     try {
       // Android browser fails here
@@ -170,31 +195,33 @@ var CacheEntry = function(entry) {
   this.content  = '';
   this.mimetype = '';
   this.src      = '';
-  if (entry instanceof HTMLElement) {
-    // If entry.elem exists, all properties will be derived from the element.
+  this.lazyload = false;
+
+  // Check if this is an HTMLElement instance
+  if (entry.nodeName) {
+    // If entry is an HTMLElement, all properties will be derived from the element.
     this.tag      = entry.nodeName.toLowerCase();
     this.elem     = entry;
     this.url      = entry.getAttribute('data-cache-url');
     this.version  = entry.getAttribute('data-cache-version') || config['version'];
-    // TODO: What if lazyload supported natively?
-    this.lazyload = entry.getAttribute('lazyload') !== null ? true : false;
   } else {
     this.tag      = entry.tag;
     this.elem     = null;
     this.url      = entry.url;
     this.version  = entry.version || config['version'];
-    this.lazyload = entry.lazyload !== undefined ? entry.lazyload : false;
   }
 
-  if (this.tag === 'img') {
+  if (this.tag === 'img' && document.querySelector) {
     this.elem.src = SPACER_GIF;
+    // TODO: What if lazyload supported natively?
+    this.lazyload = entry.getAttribute('lazyload') !== null ? true : false;
     // TODO: Determine size of image responsively
   }
 };
 CacheEntry.prototype = {
   load: function(callback, errorCallback) {
     // If storage is not available, fallback
-    if (!storage) {
+    if (!storage || !document.querySelector) {
       if (debug && console) console.log('[%s] storage is unavailable. falling back.', this.url);
       this.constructDOM(callback);
     // If previous version doesn't exist, fetch and construct;
@@ -212,7 +239,7 @@ CacheEntry.prototype = {
         this.constructDOM(callback);
       }).bind(this));
     } else {
-      this.readCache((function(data) {
+      this.readCache((function onReadCache(data) {
         // If cache doesn't exist
         if (!data) {
           this.fetch((function fetchResponse(data) {
@@ -266,24 +293,34 @@ CacheEntry.prototype = {
     // At this point, this.content is either a text or an arraybuffer.
     // If received content is Blob and storage is not FileSystem, convert it to DataURL
     if (storage instanceof fileSystem) {
+      // TODO: store as Blob if Firefox
       try {
         storage.set(this);
       } catch (e) {
         throw e;
       }
     } else if (isBinary(this.tag)) {
-      // Convert to DataURL for storage purpose
-      var blob = createBlob(this.content, this.mimetype);
-      var reader = new FileReader();
-      reader.onload = (function(event) {
-        this.content = event.target.result;
+      // Convert content to DataURL for storage purpose
+      if (typeof ArrayBuffer !== 'undefined' && this.content instanceof ArrayBuffer) {
+        var blob = createBlob(this.content, this.mimetype);
+        var reader = new FileReader();
+        reader.onload = (function onReaderLoad(event) {
+          this.content = event.target.result;
+          try {
+            storage[method](this);
+          } catch (e) {
+            throw e;
+          }
+        }).bind(this);
+        reader.readAsDataURL(blob);
+      } else if (this.content instanceof Array) {
+        this.content = 'data:'+this.mimetype+';base64,'+base64encode(this.content);
         try {
           storage[method](this);
-        } catch (e) {
+        } catch(e) {
           throw e;
         }
-      }).bind(this);
-      reader.readAsDataURL(blob);
+      }
     } else {
       try {
         storage[method](this);
@@ -297,15 +334,40 @@ CacheEntry.prototype = {
   },
   fetch: function(callback, errorCallback) {
     var xhr = new XMLHttpRequest();
+    var binaryReady = (typeof xhr.responseType === 'string');
     xhr.open('GET', this.url, true);
-    // Since Android browser doesn't support 'blob' type on XHR, we use 'arraybuffer' instead
-    xhr.responseType = isBinary(this.tag) ? 'arraybuffer' : 'text';
-    xhr.onreadystatechange = (function() {
+    if (binaryReady) {
+      xhr.responseType = isBinary(this.tag) ? 'blob' : 'text';
+    } else if (xhr.overrideMimeType) {
+      // Hack if binary is not supported
+      xhr.overrideMimeType('text/plain; charset=x-user-defined');
+    }
+    xhr.onreadystatechange = (function onReadyStateChange() {
       if (xhr.readyState === 4) {
         var data = {};
         if (xhr.status === 200 || xhr.status === 304) {
           data.mimetype = xhr.getResponseHeader('Content-Type').replace(/^(.*?);.*$/g, '$1');
-          data.content = xhr.response;
+          if (isBinary(this.tag)) {
+            if (binaryReady) {
+              data.content = xhr.response;
+              if (debug && console) console.log('Loaded binary as Blob.');
+            } else if (VBArray) {
+              data.content = new VBArray(xhr.responseBody).toArray();
+              if (debug && console) console.log('Loaded binary using VBArray.');
+            } else {
+              // For IE 8 & 9
+              data.content = [];
+              var bin = xhr.responseText;
+              for (var i = 0; i < bin.length; i++) {
+                var c = bin.charCodeAt(i);
+                data.content.push(c & 0xff);
+              }
+              if (debug && console) console.log('Loaded binary using text manipulation.');
+            }
+          } else {
+            data.content = xhr.responseText;
+            if (debug && console) console.log('Loaded text content.');
+          }
         } else if (xhr.status === 0) {
           // replace status code with cross domain if it is
           if (this.url.indexOf(window.location.origin) === -1) {
@@ -323,34 +385,17 @@ CacheEntry.prototype = {
     xhr.send();
   },
   constructDOM: function(callback) {
+    callback = typeof callback !== 'function' ? function() {} : callback;
+
     // At this point, no `src` means either DataURL or text content
     if (!this.src && this.content !== '') {
-      if (config['inline-resource'] === 'no') {
-        var blob;
-        // Convert DataURL into BlobURL 
-        if (typeof this.content == 'string' && this.content.indexOf('data') === 0) {
-          var binary = atob(this.content.split(',')[1]);
-          var array = Array.prototype.map.call(binary, function(char) {
-            return char.charCodeAt(0);
-          });
-          blob = createBlob(new Uint8Array(array), this.mimetype);
-        // Convert text content into BlobURL 
-        } else {
-          blob = createBlob(this.content, this.mimetype);
-        }
-        this.src = URL.createObjectURL(blob);
-        // Don't forget to revoke BlobURL
-        addEventListenerFn(this.elem, 'unload', (function domOnUnload() {
-          URL.revokeObjectURL(this.src);
-        }).bind(this));
-
+      // If DataURL
+      if (typeof this.content === 'string' && this.content.indexOf('data:') === 0) {
+        this.src = this.content;
       // In case of `link` tag for inline, use `style` instead
       } else if (this.tag === 'link') {
         this.tag = 'style';
       }
-    // No contents loaded. fallback
-    } else {
-      this.src = this.url;
     }
 
     if (this.tag) {
@@ -358,27 +403,59 @@ CacheEntry.prototype = {
         case 'audio':
         case 'video':
         case 'img':
-          this.elem.setAttribute('src', this.src || this.url);
+          if (this.src) {
+            this.elem.setAttribute('src', this.src);
+            if (debug && console) console.log('Replaced src of '+this.tag);
+            callback();
+          } else {
+            this.elem.setAttribute('src', this.url);
+            if (debug && console) console.log('Fallback to '+this.tag);
+            addEventListenerFn(this.elem, 'load', callback);
+          }
           break;
         case 'script':
           if (this.src) {
             this.elem.setAttribute('src', this.src);
+            if (debug && console) console.log('Replaced src of script');
+            callback();
           } else if (this.content) {
-            this.elem.textContent = this.content;
+            if (this.elem.textContent) {
+              this.elem.textContent = this.content;
+            } else {
+              this.elem.innerText = this.content;
+            }
+            if (debug && console) console.log('Inlined to script');
+            callback();
+            return;
           } else {
             this.elem.setAttribute('src', this.url);
+            if (debug && console) console.log('Fallback to script');
+            addEventListenerFn(this.elem, 'load', callback);
           }
           break;
         case 'link':
-          this.elem.setAttribute('href', this.src || this.url);
+          if (this.src) {
+            this.elem.setAttribute('href', this.src);
+            if (debug && console) console.log('Replaced href of link');
+            callback();
+          } else {
+            this.elem.setAttribute('href', this.url);
+            if (debug && console) console.log('Fallback to link');
+            addEventListenerFn(this.elem, 'load', callback);
+          }
           break;
         case 'style':
+          if (debug && console) console.log('Inserted style tag');
           this.elem = document.createElement('style');
-          this.elem.textContent = this.content;
+          if (this.elem.textContent) {
+            this.elem.textContent = this.content;
+          } else {
+            this.elem.innerText = this.content;
+          }
           document.getElementsByTagName('head')[0].appendChild(this.elem);
-          break;
+          callback();
+          return;
       }
-      addEventListenerFn(this.elem, 'load', callback);
     }
   }
 };
@@ -451,30 +528,37 @@ var CacheManager = function() {
   }
 
   config['prev-version'] = Cookies.getItem('pcache_version');
+  // TODO: Store something else if browser is not supported
   Cookies.setItem('pcache_version', config['version']);
   debug = config['debug-mode'] !== 'no' ? true : false;
 
   if (debug && console) console.log('PortableCache config:', config);
 
-  var ps = config['preferred-storage'];
-  if (ps=='filesystem' || (requestFileSystem && ps=='auto')) {
-    if (debug && console) console.log('FileSystem API is available');
-    storage = new fileSystem();
+  try {
+    var ps = config['preferred-storage'];
+    if (ps=='filesystem' || (requestFileSystem && ps=='auto')) {
+      if (debug && console) console.log('FileSystem API is available');
+      storage = new fileSystem();
 
-  } else if (ps=='idb' || (indexedDB && ps=='auto')) {
-    if (debug && console) console.log('IndexedDB API is available');
-    storage = new idb();
+    } else if (ps=='idb' || (indexedDB && ps=='auto')) {
+      if (debug && console) console.log('IndexedDB API is available');
+      storage = new idb();
 
-  } else if (ps=='sql' || (openDatabase && ps=='auto')) {
-    if (debug && console) console.log('WebSQL Database is available');
-    storage = new sql();
+    } else if (ps=='sql' || (openDatabase && ps=='auto')) {
+      if (debug && console) console.log('WebSQL Database is available');
+      storage = new sql();
 
-  } else if (ps=='localstorage' || (localStorage && ps=='auto')) {
-    if (debug && console) console.log('LocalStorage is available');
-    storage = new ls();
+    } else if (ps=='localstorage' || (localStorage && ps=='auto')) {
+      if (debug && console) console.log('LocalStorage is available');
+      storage = new ls();
 
-  } else {
-    if (debug && console) console.log('None of storages are available. Fallback to simple attribute fix.');
+    } else {
+      if (debug && console) console.log('None of storages are available. Fallback to simple attribute fix.');
+      addEventListenerFn(window, 'load', onReady);
+      return;
+    }
+  } catch (e) {
+    if (debug && console) console.log('Storage failure. Falling back: ', e);
     addEventListenerFn(window, 'load', onReady);
     return;
   }
@@ -487,19 +571,10 @@ CacheManager.prototype = {
   queryElements: function(queryStrings, callback) {
     var elems = [], i;
     for (i = 0; i < queryStrings.length; i++) {
-      var query = queryStrings[i];
-
-      // if document.querySelectorAll is supported
-      if (document.querySelectorAll) {
-        elems = Array.prototype.concat.apply(elems, document.querySelectorAll(query+'[data-cache-url]'));
-
-      // for legacy browsers
-      } else {
-        var tags = document.getElementsByTagName(query);
-        for (var j = 0; j < tags.length; j++) {
-          if (tags[j].getAttribute('data-cache-url') !== null) {
-            elems.push(tags[j]);
-          }
+      var tags = document.getElementsByTagName(queryStrings[i]);
+      for (var j = 0; j < tags.length; j++) {
+        if (tags[j].getAttribute('data-cache-url') !== null) {
+          elems.push(tags[j]);
         }
       }
     }
@@ -527,12 +602,12 @@ CacheManager.prototype = {
     var scrollY = window.pageYOffset || document.documentElement.scrollTop;
     var pageHeight = window.innerHeight || document.documentElement.clientHeight;
     var min = scrollY - (pageHeight/2);
-    var max = scrollY + ~(pageHeight*1.5);
+    var max = scrollY + ~~(pageHeight*1.5);
     for (var i = 0; i < this.lazyload.length; i++) {
       var cache = this.lazyload[i];
       var elemY = cache.elem.offsetTop;
       var elemHeight = cache.elem.offsetHeight;
-      if (elemY+elemHeight >= min || elemY <= max) {
+      if (elemY+elemHeight <= min || elemY <= max) {
         cache.load();
         this.lazyload.splice(i--, 1);
       }
@@ -622,10 +697,10 @@ var idb = function() {
     this.onready();
   }).bind(this);
   req.onblocked = function(e) {
-    throw '['+url+'] Opening IndexedDB blocked.'+e.target.errorCode;
+    throw 'Opening IndexedDB blocked: '+e.target.error.message;
   };
   req.onerror = function(e) {
-    throw '['+url+'] Error on opening IndexedDB.'+e.target.errorCode;
+    throw 'Error on opening IndexedDB: '+e.target.error.message;
   };
   req.onupgradeneeded = (function(e) {
     this.db = e.target.result;
@@ -651,7 +726,7 @@ idb.prototype = {
     };
     req.onerror = function(e) {
       throw '['+_data.url+'] Error writing IndexedDB: '+e;
-    }
+    };
   },
   get: function(_data, callback) {
     var req = this.db.transaction(['cache'], 'readonly').objectStore('cache').get(_data.url);
@@ -684,11 +759,11 @@ var sql = function() {
         'mimetype    TEXT, '+
         'version     TEXT)');
       this.onready();
-    }).bind(this), (function sqlOnChangeVersionError(e) {
+    }).bind(this), function sqlOnChangeVersionError(e) {
       throw 'Failed changing WebSQL version.';
-    }).bind(this), (function sqlOnChangeVersionUpgraded() {
+    }, function sqlOnChangeVersionUpgraded() {
       if (debug && console) console.log('WebSQL Database upgraded.');
-    }).bind(this));
+    });
   } else {
     if (debug && console) console.log('WebSQL Database initialized.');
     setTimeout((function() {
@@ -792,4 +867,4 @@ ls.prototype = {
 window.CacheEntry = CacheEntry;
 window.CacheManager = new CacheManager();
 
-// })(window, document);
+})();

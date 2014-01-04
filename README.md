@@ -2,7 +2,7 @@
 
 Cache assets, reduce downloads, load faster.
 
-# What is PortableCache.js?
+## What is PortableCache.js?
 
 PortableCache.js (PCache) is a resource loader with mobile browsers in mind.
 
@@ -16,11 +16,11 @@ PortableCache.js (PCache) is a resource loader with mobile browsers in mind.
 * Supports lazyload image.
 * Supports responsive images (NOT IMPLEMENTED YET).
 
-# Demo
+## Demo
 
 [http://demo.agektmr.com/PortableCache/example/](http://demo.agektmr.com/PortableCache/example/)
 
-# Quick Start
+## Quick Start
 
 You can quickly try out this library by following 3 steps.
 
@@ -35,149 +35,81 @@ You can quickly try out this library by following 3 steps.
    `<img src="img/image.jpg">`<br/>
    `<img data-cache-url="img/image.jpg">`
 
-# Configuration API
+## Configuration
 
 Configuration is set by using `meta[name="portable-cache"]`. The `content` 
 attribute accepts comma separated parameters as listed below.
 
-    <meta name="portable-cache" content="version=20130627, preferred-storage=localstorage, debug-mode=yes, responsive-image=yes, declarative-mode=yes, inline-resource=yes">
+    <meta name="portable-cache" content="version=20130627, preferred-storage=localstorage, debug-mode=yes, responsive-image=yes>
 
+<!-- TODO: Fix formatting of cells -->
 <table>
 <tr>
-<td markdown="block">
-**Key**
-</td>
-<td markdown="block">
-**Value**
-</td>
-<td markdown="block">
-**Default**
-</td>
-<td markdown="block">
-
-</td>
+<td>Key</td>
+<td>Value</td>
+<td>Default</td>
+<td></td>
 </tr>
 <tr>
-<td markdown="block">
-    version
-</td>
-<td markdown="block">
-    string
-</td>
-<td markdown="block">
-    ''
-</td>
-<td markdown="block">
-Required. String that indicates current version. If this differs from cookie 
-stored previous version, resources will be updated.
-</td>
+<td>version</td>
+<td>string</td>
+<td>''</td>
+<td>Required. String that indicates current version. If this differs from cookie stored previous version, resources will be updated.</td>
 </tr>
 <tr>
-<td markdown="block">
-    preferred-storage
-</td>
-<td markdown="block">
-    (auto|filesystem|idb|sql|localstorage)
-</td>
-<td markdown="block">
-    'auto'
-</td>
-<td markdown="block">
-Optional. Preferred storage to use. If the preferred storage is not available on 
-the browser, PCache gracefully falls back.
-</td>
+<td>preferred-storage</td>
+<td>(auto|filesystem|idb|sql|localstorage)</td>
+<td>'auto'</td>
+<td>Optional. Preferred storage to use. If the preferred storage is not available on the browser, PCache gracefully falls back.</td>
 </tr>
 <tr>
-<td markdown="block">
-    inline-resource
-</td>
-<td markdown="block">
-    (yes|no)
-</td>
-<td markdown="block">
-    'no'
-</td>
-<td markdown="block">
-Optional. Fetched resources will be inlined in HTML if 'yes'.
-</td>
+<td>responsive-image</td>
+<td>(yes|no)</td>
+<td>'no'</td>
+<td>Optional. Indicates if images should load responsive images.
+THIS FEATURE NEEDS MORE WORK.</td>
 </tr>
 <tr>
-<td markdown="block">
-    declarative-mode
-</td>
-<td markdown="block">
-    (yes|no)
-</td>
-<td markdown="block">
-    'yes'
-</td>
-<td markdown="block">
-Optional. Indicates if developer wants to use this in imperative mode if 'no'.  
-THIS FEATURE NEEDS MORE WORK.
-</td>
-</tr>
-<tr>
-<td markdown="block">
-    responsive-image
-</td>
-<td markdown="block">
-    (yes|no)
-</td>
-<td markdown="block">
-    'no'
-</td>
-<td markdown="block">
-Optional. Indicates if images should load responsive images.  
-THIS FEATURE NEEDS MORE WORK.
-</td>
-</tr>
-<tr>
-<td markdown="block">
-    debug-mode
-</td>
-<td markdown="block">
-    (yes|no)
-</td>
-<td markdown="block">
-    'no'
-</td>
-<td markdown="block">
-Optional. Enables debug messages in console if 'yes'
-</td>
+<td>debug-mode</td>
+<td>(yes|no)</td>
+<td>'no'</td>
+<td>Optional. Enables debug messages in console if 'yes'</td>
 </tr>
 </table>
 
-# Declarative APIs
-## Caching and loading resources
+## Declarative APIs
+### Caching and loading resources
 
 All you have to do is to replace attributes that indicates URL of the resource 
 to `data-cache-url`.
 
-### script
+#### script
 
     <script data-cache-url="js/main.js"></script>
 
-### link
+#### link
 
     <link data-cache-url="css/style.css">
 
-### img
+#### img
 
     <img data-cache-url="img/image.jpg">
 
-## Per element versioning
+### Per element versioning
 
 You may want to retain version of certain cached elements. These versions will 
-override global version specified in `meta[name="portable-cache"]`.  
+override global version specified in `meta[name="portable-cache"]`.
+
 <img data-cache-url="img/image.jpg" data-cache-version="20131228">
 
-## Lazyload images
+### Lazyload images
 
 You can defer loading of images until user actually see them in viewport by 
-adding `lazyload` attribute.  
+adding `lazyload` attribute.
+
 <img data-cache-url="img/image.jpg" lazyload>
 
-## Responsive images
+### Responsive images
 
 You can load responsive image by using `src-set` semantics to 
 `img[data-cache-url]`.  
@@ -222,13 +154,12 @@ NOT IMPLEMENTED YET.
         </div>
       </body>
 
-# Imperative APIs
+## Imperative APIs
 
 For configuration, use `meta[name="portable-cache"]` explained at Declarative 
 APIs.
 
-## TBD
-# Author
+### TBD
+## Author
 
-* Eiji Kitamura ([+agektmr](https://google.com/+agektmr), 
-  [@agektmr](https://twitter.com/agektmr))
+* Eiji Kitamura ([+agektmr](https://google.com/+agektmr), [@agektmr](https://twitter.com/agektmr))

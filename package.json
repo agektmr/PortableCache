@@ -2,7 +2,7 @@
   "name": "PortableCache.js",
   "version": "0.0.1",
   "description": "Cache assets, reduce downloads, load faster.",
-  "main": "Gruntfile.js",
+  "main": "src/PortableCache.js",
   "devDependencies": {
     "grunt": "~0.4.1",
     "grunt-contrib-concat": "~0.3.0",
