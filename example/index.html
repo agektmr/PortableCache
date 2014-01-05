@@ -8,7 +8,7 @@
     <meta name="portable-cache" content="version=20131226, debug-mode=yes">
     <link rel="stylesheet" data-cache-url="lib/bootstrap/bootstrap.css">
     <script src="../src/PortableCache.js"></script>
-    <script>
+    <!--script>
       document.addEventListener('load', function(e) {
         if (window.performance) {
           var loadingTime = window.performance.timing.loadEventStart - window.performance.timing.requestStart;
@@ -16,7 +16,7 @@
           console.timeStamp && console.timeStamp('onload');
         }
       });
-    </script>
+    </script-->
   </head>
   <body>
     <div class="navbar navbar-inverse">
@@ -25,67 +25,94 @@
       </div>
     </div>
     <div class="container">
-      <div class="hero-unit">
-        <h1 class="hidden-phone">PortableCache.js</h1>
+      <div class="well">
+        <h1>PortableCache.js</h1>
         <p>Cache assets, reduce downloads, load faster.</p>
         <a href="http://github.com/agektmr/PortableCache.js" target="_blank" class="btn btn-primary">View on Github</a>
       </div>
-      <div>
-        <h2>How to use</h2>
-        <p>All you have to do is to insert tags like following:</p>
-        <pre>// declare global cache version using meta[name=”cache-version”]
-&lt;meta name="cache-version" content="20130627"&gt;
-// declare preferred storage to use [file-system, idb, sql, localstorage]
-// without this tag will automatically choose best possible storage
-&lt;meta name="cache-preferred-storage" content="sql"&gt;
-// use DataURL instead of ObjectURL using Blob for Blob resources
-// such as image, audio, video
-&lt;meta name="cache-use-data-url" content="true"&gt;
-// adding “data-cache-src” or “data-cache-href” attribute will
-// declaratively fetch and replace the tag with cache content if possible
-// request declaration.
-&lt;script data-cache-src="js/bootstrap.js" data-cache-version="20130627"&gt;
-&lt;link rel="stylesheet" data-cache-href="css/bootstrap.css" type="text/css"&gt;
-&lt;img data-cache-src="img/121404791_e6a2afda06_b.jpg" /&gt;
-// “data-cache-version” attribute gives resource specific cache version.
-// this enables users to avoid updating whole assets.
-&lt;script data-cache-src="js/bootstrap.js" data-cache-version="20130623"&gt;
-// finally, add PortableCache.js link after scripts declaration.
-&lt;script src="js/PortableCache.js"&gt;&lt;/script&gt;</pre>
-        <p>In declarative mode, everything else will be taken care of by PortableCache.js.</p>
-
-        <h2>What does it do?</h2>
-        <p>PortableCache.js automatically caches intended resources to the best possible storage in user's browser.<br/>
-        Supported storages ordered in priority:</p>
-        <ol>
-          <li>FileSystem</li>
+      <h2>What is PortableCache.js?</h2>
+      <p>PortableCache.js (PCache) is a resource loader with mobile browsers in mind.</p>
+      <ul>
+        <li>Declarative APIs.</li>
+        <li><p>Uses the best available storage on user's browser:</p>
+          <ul><li>FileSystem</li>
           <li>IndexedDB</li>
-          <li>WebSQL DB</li>
-          <li>LocalStorage</li>
-        </ol>
-        <p>Confirmed it works on:</p>
-        <ul>
-          <li>Chrome Desktop, Android, iOS</li>
-          <li>Firefox Desktop, Android</li>
-          <li>Opera Desktop (latest), Android (latest)</li>
-          <li>Safari Desktop (latest), iOS (latest)</li>
-        </ul>
-        <p>still needs some work on Android legacy browsers.</p>
-        <h2>Current Status</h2>
-        <p>Under development.</p>
-        <h2>Example Image Stabs</h2>
-        <p>Photos by <a href="http://www.flickr.com/photos/zb">Gregor Hochmuth</a></p>
-        <img data-cache-url="img/abstract1_640x428.jpg" width="640" height="428" alt="" lazyload>
-        <p>Photo by <a href="http://www.flickr.com/photos/jimnix/4971254545/">Jim Nix / Nomadic</a></p>
-        <img data-cache-url="img/abstract2_640x441.jpg" width="640" height="441" alt="" lazyload>
-        <p>Photo by <a href="http://www.flickr.com/photos/zen/9990061573/">zen</a></p>
-        <img data-cache-url="img/abstract3_640x541.jpg" width="640" height="541" alt="" lazyload>
-        <p>Photo by <a href="http://www.flickr.com/photos/cobalt/513184722/">cobalt123</a></p>
-        <h2>Author</h2>
-        <ul>
-          <li>Eiji Kitamura (<a href="http://google.com/+agektmr" target="_blank">+agektmr</a>, <a href="http://twitter.com/agektmr" target="_blank">@agektmr</a>)</li>
-        </ul>
-      </div>
+          <li>WebSQL</li>
+          <li>LocalStorage</li></ul></li>
+        <li><p>Falls back gracefully when storage is not available.</p></li>
+        <li>Supports lazyload image.</li>
+        <li>Supports responsive images (NOT IMPLEMENTED YET).</li>
+      </ul>
+      <h2>Quick Start</h2>
+      <p>You can quickly try out this library by following 3 steps.</p>
+      <ol>
+        <li>Insert following <code>meta</code> tag to your existing project's <code>head</code> tag. <br />
+        <code>&lt;meta name="portable-cache" content="version=20131228"&gt;</code></li>
+        <li>Insert <code>script</code> tag to load PortableCache.js (Make sure it is below <code>meta[name=""portable-cache]</code>). <br />
+        <code>&lt;script src="https://raw.github.com/agektmr/PortableCache.js/master/src/PortableCache.js"&gt;</code></li>
+        <li>Replace attribute name of resources you'd like to cache to <code>data-cache-url</code>. <br />
+        <code>&lt;img src="img/image.jpg"&gt;</code> <br />
+        <code>&lt;img data-cache-url="img/image.jpg"&gt;</code></li>
+      </ol>
+
+      <h2>Browser Support</h2>
+
+      <table class="table table-bordered"><tr><th>Browser</th>
+      <th>Storage</th>
+      <th>Lazy loading Images</th>
+      <th>Responsive Images</th>
+      </tr>
+      <tr><td>Chrome</td>
+      <td>FileSystem API</td>
+      <td>Supported</td>
+      <td>TBD</td>
+      </tr>
+      <tr><td>Firefox</td>
+      <td>IndexedDB</td>
+      <td>Supported</td>
+      <td>TBD</td>
+      </tr>
+      <tr><td>Android Browser 4.3</td>
+      <td>WebSQL</td>
+      <td>Supported</td>
+      <td>TBD</td>
+      </tr>
+      <tr><td>IE 6, 7</td>
+      <td>N/A</td>
+      <td>N/A</td>
+      <td>N/A</td>
+      </tr>
+      <tr><td>IE 8, 9</td>
+      <td>LocalStorage</td>
+      <td>Supported</td>
+      <td>TBD</td>
+      </tr>
+      <tr><td>IE 10, 11</td>
+      <td>IndexedDB</td>
+      <td>Supported</td>
+      <td>TBD</td>
+      </tr>
+      <tr><td>Safari 7</td>
+      <td>WebSQL</td>
+      <td>Supported</td>
+      <td>TBD</td>
+      </tr>
+      </table>
+
+      <p>* Browsers not listed here are yet to test.</p>
+
+      <h2>Example Image Stabs</h2>
+      <p>Photos by <a href="http://www.flickr.com/photos/zb">Gregor Hochmuth</a></p>
+      <img data-cache-url="img/abstract1_640x428.jpg" class="img-responsive" alt="" lazyload>
+      <p>Photo by <a href="http://www.flickr.com/photos/jimnix/4971254545/">Jim Nix / Nomadic</a></p>
+      <img data-cache-url="img/abstract2_640x441.jpg" class="img-responsive" alt="" lazyload>
+      <p>Photo by <a href="http://www.flickr.com/photos/zen/9990061573/">zen</a></p>
+      <img data-cache-url="img/abstract3_640x541.jpg" class="img-responsive" alt="" lazyload>
+      <p>Photo by <a href="http://www.flickr.com/photos/cobalt/513184722/">cobalt123</a></p>
+      <h2>Author</h2>
+      <ul>
+        <li>Eiji Kitamura (<a href="https://google.com/+agektmr">+agektmr</a>, <a href="https://twitter.com/agektmr">@agektmr</a>)</li>
+      </ul>
     </div>
     <footer>
       <hr/>

@@ -1,6 +1,6 @@
 {
   "name": "PortableCache.js",
-  "version": "0.0.1",
+  "version": "0.5.0",
   "description": "Cache assets, reduce downloads, load faster.",
   "main": "src/PortableCache.js",
   "devDependencies": {
