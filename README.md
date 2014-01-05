@@ -100,14 +100,14 @@ to `data-cache-url`.
 You may want to retain version of certain cached elements. These versions will 
 override global version specified in `meta[name="portable-cache"]`.
 
-<img data-cache-url="img/image.jpg" data-cache-version="20131228">
+    <img data-cache-url="img/image.jpg" data-cache-version="20131228">
 
 ### Lazyload images
 
 You can defer loading of images until user actually see them in viewport by 
 adding `lazyload` attribute.
 
-<img data-cache-url="img/image.jpg" lazyload>
+    <img data-cache-url="img/image.jpg" lazyload>
 
 ### Responsive images
 
@@ -125,7 +125,6 @@ NOT IMPLEMENTED YET.
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
         <meta name="portable-cache" content="version=20130630">
         <link rel="stylesheet" data-cache-url="css/bootstrap.css">
-        <link rel="stylesheet" data-cache-url="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.2/jquery.min.js">
         <script src="js/PortableCache.js"></script>
       </head>
       <body>
@@ -142,10 +141,9 @@ NOT IMPLEMENTED YET.
             <h2>Current Status</h2>
             <p>Under development. Very early stage.</p>
             <h2>Example Image Stabs</h2>
-            <img data-cache-url="img/121404791_e6a2afda06_b.jpg" alt="">
-            <img data-cache-url="img/3672537740_7a1a3e63fd_b.jpg" alt="">
-            <img data-cache-url="img/4316514826_81562d1207_b.jpg" alt="">
-            <img data-cache-url="img/4453502862_e9999a219e_b.jpg" alt="">
+            <img data-cache-url="img/abstract1_640x428.jpg" alt="" lazyload>
+            <img data-cache-url="img/abstract2_640x441.jpg" alt="" lazyload>
+            <img data-cache-url="img/abstract3_640x541.jpg" alt="" lazyload>
             <h2>Author</h2>
             <ul>
               <li>Eiji Kitamura (<a href="http://google.com/+agektmr" target="_blank">+agektmr</a>, <a href="http://twitter.com/agektmr" target="_blank">@agektmr</a>)</li>
@@ -160,6 +158,63 @@ For configuration, use `meta[name="portable-cache"]` explained at Declarative
 APIs.
 
 ### TBD
+## Browser Support
+
+<!-- TODO: Fix formatting of cells -->
+<table>
+<tr>
+<td>Browser</td>
+<td>Storage</td>
+<td>Lazy loading Images</td>
+<td>Responsive Images</td>
+</tr>
+<tr>
+<td>Chrome</td>
+<td>FileSystem API</td>
+<td>Supported</td>
+<td>TBD</td>
+</tr>
+<tr>
+<td>Firefox</td>
+<td>IndexedDB</td>
+<td>Supported</td>
+<td>TBD</td>
+</tr>
+<tr>
+<td>Android Browser 4.3</td>
+<td>WebSQL</td>
+<td>Supported</td>
+<td>TBD</td>
+</tr>
+<tr>
+<td>IE 6, 7</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>IE 8, 9</td>
+<td>LocalStorage</td>
+<td>Supported</td>
+<td>TBD</td>
+</tr>
+<tr>
+<td>IE 10, 11</td>
+<td>IndexedDB</td>
+<td>Supported</td>
+<td>TBD</td>
+</tr>
+<tr>
+<td>Safari 7</td>
+<td>WebSQL</td>
+<td>Supported</td>
+<td>TBD</td>
+</tr>
+</table>
+
+* Browsers not listed here are yet to test.
+
 ## Author
 
-* Eiji Kitamura ([+agektmr](https://google.com/+agektmr), [@agektmr](https://twitter.com/agektmr))
+* Eiji Kitamura ([+agektmr](https://google.com/+agektmr), 
+  [@agektmr](https://twitter.com/agektmr))

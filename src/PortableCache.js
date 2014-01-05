@@ -18,7 +18,7 @@ var viewport = {
 var storage = null,
     debug   = false,
     // Workaround for ~IE8
-    console = typeof console !== 'undefined' ? console : false;
+    console = typeof window.console !== 'undefined' ? window.console : false;
 
 var SPACER_GIF = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
 
@@ -62,12 +62,11 @@ var URL               = window.URL ||
 var base64encode = function(s) {
   var base64list = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
   var t = '', p = -6, a = 0, i = 0, v = 0, c;
-  s = s.join('');
 
   while ((i < s.length) || (p > -6)) {
     if (p < 0) {
       if (i < s.length) {
-        c = s.charCodeAt(i++);
+        c = s[i++];
         v += 8;
       } else {
         c = 0;
@@ -211,7 +210,9 @@ var CacheEntry = function(entry) {
     this.version  = entry.version || config['version'];
   }
 
-  if (this.tag === 'img' && document.querySelector) {
+  // Check if we really should skip legacy browsers
+  // if (this.tag === 'img' && document.querySelector) {
+  if (this.tag === 'img' && storage) {
     this.elem.src = SPACER_GIF;
     // TODO: What if lazyload supported natively?
     this.lazyload = entry.getAttribute('lazyload') !== null ? true : false;
@@ -223,20 +224,18 @@ CacheEntry.prototype = {
     // If storage is not available, fallback
     if (!storage || !document.querySelector) {
       if (debug && console) console.log('[%s] storage is unavailable. falling back.', this.url);
-      this.constructDOM(callback);
+      callback();
     // If previous version doesn't exist, fetch and construct;
-    } else if (!config['prev-version']) {
+    } else if (config['prev-version'] === null) {
       if (debug && console) console.log('[%s] no version found. fetching.', this.url);
       this.fetch((function fetchResponse(data) {
-        this.src      = data.src;
         this.content  = data.content;
         this.mimetype = data.mimetype;
-        this.createCache(data);
-        this.constructDOM(callback);
         if (debug && console) console.log('[%s] fetch succeeded. cached and loading.', this.url);
+        this.createCache(callback);
       }).bind(this), (function fetchError() {
         if (debug && console) console.log('[%s] fetch failed. falling back.', this.url);
-        this.constructDOM(callback);
+        callback();
       }).bind(this));
     } else {
       this.readCache((function onReadCache(data) {
@@ -245,12 +244,11 @@ CacheEntry.prototype = {
           this.fetch((function fetchResponse(data) {
             this.content  = data.content;
             this.mimetype = data.mimetype;
-            this.createCache(data);
-            this.constructDOM(callback);
             if (debug && console) console.log('[%s] fetch succeeded. cached and loading.', this.url);
+            this.createCache(callback);
           }).bind(this), (function fetchError() {
             if (debug && console) console.log('[%s] fetch failed. falling back.', this.url);
-            this.contructDOM(callback);
+            callback();
           }).bind(this));
 
         // If cache exists
@@ -260,20 +258,19 @@ CacheEntry.prototype = {
             this.fetch((function fetchResponse(data) {
               this.content  = data.content;
               this.mimetype = data.mimetype;
-              this.createCache(data);
-              this.constructDOM(callback);
               if (debug && console) console.log('[%s] fetch succeeded. cached and loading.', this.url);
+              this.createCache(callback);
             }).bind(this), (function fetchError() {
               if (debug && console) console.log('[%s] fetch failed. falling back.', this.url);
-              this.constructDOM(callback);
+              callback();
             }).bind(this));
           // If cache is still valid
           } else {
             this.src      = data.src || '';
             this.content  = data.content || '';
             this.mimetype = data.mimetype;
-            this.constructDOM(callback);
             if (debug && console) console.log('[%s] cache found. loading.', this.url);
+            callback();
           }
         }
       }).bind(this), errorCallback);
@@ -282,7 +279,7 @@ CacheEntry.prototype = {
   readCache: function(callback, errorCallback) {
     storage.get(this, callback, errorCallback);
   },
-  createCache: function() {
+  createCache: function(callback) {
     var method = 'set';
 
     // If cache exists, "update" instead of "insert" only if WebSQL
@@ -294,36 +291,40 @@ CacheEntry.prototype = {
     // If received content is Blob and storage is not FileSystem, convert it to DataURL
     if (storage instanceof fileSystem) {
       // TODO: store as Blob if Firefox
+      if (debug && console) console.log('Storing Blob as is to FileSystem.');
       try {
-        storage.set(this);
+        storage.set(this, callback);
       } catch (e) {
         throw e;
       }
     } else if (isBinary(this.tag)) {
       // Convert content to DataURL for storage purpose
-      if (typeof ArrayBuffer !== 'undefined' && this.content instanceof ArrayBuffer) {
-        var blob = createBlob(this.content, this.mimetype);
+      if (Blob && this.content instanceof Blob) {
+        if (debug && console) console.log('Converting Blob to DataURL using FileReader in order to store.');
         var reader = new FileReader();
         reader.onload = (function onReaderLoad(event) {
+          if (debug && console) console.log('Storing DataURL.');
           this.content = event.target.result;
           try {
-            storage[method](this);
+            storage[method](this, callback);
           } catch (e) {
             throw e;
           }
         }).bind(this);
-        reader.readAsDataURL(blob);
+        reader.readAsDataURL(this.content);
       } else if (this.content instanceof Array) {
+        if (debug && console) console.log('Blob converted to DataURL with manipulation.');
         this.content = 'data:'+this.mimetype+';base64,'+base64encode(this.content);
         try {
-          storage[method](this);
+          storage[method](this, callback);
         } catch(e) {
           throw e;
         }
       }
     } else {
+      if (debug && console) console.log('Storing text.');
       try {
-        storage[method](this);
+        storage[method](this, callback);
       } catch (e) {
         throw e;
       }
@@ -336,10 +337,12 @@ CacheEntry.prototype = {
     var xhr = new XMLHttpRequest();
     var binaryReady = (typeof xhr.responseType === 'string');
     xhr.open('GET', this.url, true);
-    if (binaryReady) {
-      xhr.responseType = isBinary(this.tag) ? 'blob' : 'text';
+    if (binaryReady && isBinary(this.tag)) {
+      xhr.responseType = 'blob';
+      // If setting 'blob' is rejected, use 'arraybuffer' instead
+      xhr.responseType = xhr.responseType !== 'blob' ? 'arraybuffer' : 'blob';
     } else if (xhr.overrideMimeType) {
-      // Hack if binary is not supported
+      // Hack if binary is not supported (but non IE)
       xhr.overrideMimeType('text/plain; charset=x-user-defined');
     }
     xhr.onreadystatechange = (function onReadyStateChange() {
@@ -349,20 +352,29 @@ CacheEntry.prototype = {
           data.mimetype = xhr.getResponseHeader('Content-Type').replace(/^(.*?);.*$/g, '$1');
           if (isBinary(this.tag)) {
             if (binaryReady) {
-              data.content = xhr.response;
-              if (debug && console) console.log('Loaded binary as Blob.');
+              if (xhr.responseType === 'blob') {
+                // Modern browsers
+                data.content = xhr.response;
+                if (debug && console) console.log('Loaded binary as Blob.');
+              } else if (xhr.responseType === 'arraybuffer') {
+                // For Android Browsers
+                data.content = createBlob(xhr.response, data.mimetype);
+                if (debug && console) console.log('Loaded binary as ArrayBuffer.');
+              } else {
+                // Other legacy browsers (This won't probably be used)
+                var array = [];
+                var text = xhr.responseText;
+                for (var i = 0; i < text.length; i++) {
+                  var c = text.charCodeAt(i);
+                  array.push(c & 0xff);
+                }
+                data.content = createBlob(array, data.mimetype);
+                if (debug && console) console.log('Loaded binary using text manipulation.');
+              }
             } else if (VBArray) {
+              // For IE 8 & 9
               data.content = new VBArray(xhr.responseBody).toArray();
               if (debug && console) console.log('Loaded binary using VBArray.');
-            } else {
-              // For IE 8 & 9
-              data.content = [];
-              var bin = xhr.responseText;
-              for (var i = 0; i < bin.length; i++) {
-                var c = bin.charCodeAt(i);
-                data.content.push(c & 0xff);
-              }
-              if (debug && console) console.log('Loaded binary using text manipulation.');
             }
           } else {
             data.content = xhr.responseText;
@@ -419,7 +431,7 @@ CacheEntry.prototype = {
             if (debug && console) console.log('Replaced src of script');
             callback();
           } else if (this.content) {
-            if (this.elem.textContent) {
+            if (typeof this.elem.textContent === '') {
               this.elem.textContent = this.content;
             } else {
               this.elem.innerText = this.content;
@@ -447,12 +459,14 @@ CacheEntry.prototype = {
         case 'style':
           if (debug && console) console.log('Inserted style tag');
           this.elem = document.createElement('style');
-          if (this.elem.textContent) {
+          if (this.elem.textContent === '') {
             this.elem.textContent = this.content;
+            document.getElementsByTagName('head')[0].appendChild(this.elem);
           } else {
-            this.elem.innerText = this.content;
+            // IE8 specific hack
+            document.getElementsByTagName('head')[0].appendChild(this.elem);
+            this.elem.styleSheet.cssText = this.content;
           }
-          document.getElementsByTagName('head')[0].appendChild(this.elem);
           callback();
           return;
       }
@@ -493,11 +507,12 @@ var CacheManager = function() {
             if (this.lazyload.length) {
               this.loadLazyImages();
             } else {
-              removeEventListenerFn(document, 'scroll', onLazyload);
+              removeEventListenerFn(window, 'scroll', onLazyload);
               if (debug && console) console.log('removed `document.onscroll` event');
             }
           }).bind(this);
-          addEventListenerFn(document, 'scroll', onLazyload);
+          // Use window instead of document for IE8
+          addEventListenerFn(window, 'scroll', onLazyload);
         }
       }).bind(this));
     }).bind(this));
@@ -589,9 +604,11 @@ CacheManager.prototype = {
         length--;
       } else {
         cache.load((function onCacheLoaded(cache) {
-          count++;
-          if (debug && console) console.log(cache.src, ' loaded.');
-          if (typeof callback === 'function' && count == length) callback();
+          cache.constructDOM(function() {
+            count++;
+            if (debug && console) console.log(cache.src, ' loaded.');
+            if (typeof callback === 'function' && count == length) callback();
+          });
         }).bind(this, cache));
       }
     }
@@ -608,7 +625,9 @@ CacheManager.prototype = {
       var elemY = cache.elem.offsetTop;
       var elemHeight = cache.elem.offsetHeight;
       if (elemY+elemHeight <= min || elemY <= max) {
-        cache.load();
+        cache.load((function onCacheLoaded(cache) {
+          cache.constructDOM();
+        }).bind(this, cache));
         this.lazyload.splice(i--, 1);
       }
     }
@@ -652,26 +671,32 @@ var fileSystem = function() {
   });
 };
 fileSystem.prototype = {
-  set: function(_data) {
+  set: function(_data, callback) {
     var fileName = _data.url.replace(/\/|\./g, '_');
     this.fs.root.getFile(fileName, {create: true, exclusive: false}, (function(fileEntry) {
       // TODO: create custom directory
       fileEntry.createWriter((function(writer) {
         writer.onwriteend = (function() {
+          _data.src = fileEntry.toURL();
           var data = {
             url:      _data.url,
-            src:      fileEntry.toURL(),
+            src:      _data.src,
             mimetype: _data.mimetype,
             version:  _data.version
           };
           this.ls.set(data);
+          if (typeof callback === 'function') callback();
         }).bind(this);
 
         writer.onerror = (function(e) {
           throw '['+_data.url+'] Error writing FileSystem: '+e;
         }).bind(this);
 
-        writer.write(createBlob(_data.content, _data.mimetype));
+        if (typeof _data.content === 'string') {
+          writer.write(createBlob(_data.content, _data.mimetype));
+        } else {
+          writer.write(_data.content);
+        }
 
       }).bind(this));
     }).bind(this), (function(e) {
@@ -712,7 +737,7 @@ var idb = function() {
   }).bind(this);
 };
 idb.prototype = {
-  set: function(_data) {
+  set: function(_data, callback) {
     // TODO: Store Blob if Firefox?
     var data = {
       url:      _data.url,
@@ -722,7 +747,7 @@ idb.prototype = {
     };
     var req = this.db.transaction(['cache'], 'readwrite').objectStore('cache').put(data);
     req.onsuccess = function(e) {
-      // Do nothing
+      if (typeof callback === 'function') callback();
     };
     req.onerror = function(e) {
       throw '['+_data.url+'] Error writing IndexedDB: '+e;
@@ -772,21 +797,23 @@ var sql = function() {
   }
 };
 sql.prototype = {
-  set: function(_data) {
+  set: function(_data, callback) {
     var data = [ _data.url, _data.content, _data.mimetype, _data.version ];
     this.db.transaction((function sqlOnTransaction(transaction) {
       transaction.executeSql('INSERT INTO cache (url, content, mimetype, version) '+
           'VALUES(?, ?, ?, ?)', data, (function sqlOnExecuteSql(transaction, results) {
+        if (typeof callback === 'function') callback();
       }).bind(this), (function sqlOnTransactionError(e) {
         throw '['+_data.url+'] Error writing WebSQL: '+e.message;
       }).bind(this));
     }).bind(this));
   },
-  update: function(_data) {
+  update: function(_data, callback) {
     var data = [_data.mimetype, _data.content, _data.version, _data.url ];
     this.db.transaction((function sqlOnTransaction(transaction) {
       transaction.executeSql('UPDATE cache SET mimetype=?, content=?, version=? '+
           'WHERE url=?', data, (function sqlOnExecuteSql(transaction, results) {
+        if (typeof callback === 'function') callback();
       }).bind(this), (function sqlOnTransactionError(t, e) {
         throw '['+_data.url+'] Error updating WebSQL: '+e.message;
       }).bind(this));
@@ -831,7 +858,7 @@ var ls = function() {
   }).bind(this), 0);
 };
 ls.prototype = {
-  set: function(_data) {
+  set: function(_data, callback) {
     var data = {
       src:      _data.src || '',
       content:  _data.content || '',
@@ -841,6 +868,7 @@ ls.prototype = {
     setTimeout(function localStorageSet() {
       try {
         localStorage.setItem(_data.url, JSON.stringify(data));
+        if (typeof callback === 'function') callback();
       } catch(e) {
         throw '['+_data.url+'] Error setting LocalStorage data: '+e;
       }
