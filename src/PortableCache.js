@@ -136,7 +136,6 @@ var parseMetaContent = function(content, obj) {
   return obj;
 };
 
-
 var addEventListenerFn = (window.document.addEventListener ?
     function(element, type, fn) { element.addEventListener(type, fn); } :
     function(element, type, fn) { element.attachEvent('on'+type, fn); });
@@ -496,13 +495,13 @@ var CacheManager = function() {
       document.head === undefined) {
     if (debug) console.log('This browser is not supported. Falling back.');
     config['version'] = NOT_SUPPORTED;
-    addEventListenerFn(window, 'load', this.bootstrap.bind(this));
+    addEventListenerFn(document, 'load', this.bootstrap.bind(this));
 
   } else {
 
     var errorCallback = function(errorMessage) {
       if (debug) console.error('%s Falling back.', errorMessage);
-      addEventListenerFn(window, 'load', this.bootstrap.bind(this));
+      addEventListenerFn(document, 'load', this.bootstrap.bind(this));
     };
 
     // Initialize best available storage
@@ -521,7 +520,7 @@ var CacheManager = function() {
       // No available storages found
       config['version'] = NOT_SUPPORTED;
       if (debug) console.log('None of storages are available. Falling back.');
-      addEventListenerFn(window, 'load', this.bootstrap.bind(this));
+      addEventListenerFn(document, 'load', this.bootstrap.bind(this));
     }
   }
 };
@@ -532,7 +531,7 @@ CacheManager.prototype = {
       if (this.lazyload.length) {
         this.loadLazyImages();
       } else {
-        removeEventListenerFn(window, 'scroll', onLazyload);
+        removeEventListenerFn(document, 'scroll', onLazyload);
         if (debug) console.log('Lazyload done. Removed `document.onscroll` event');
       }
     }).bind(this);
@@ -544,8 +543,7 @@ CacheManager.prototype = {
       this.queryElements(['img', 'audio', 'video'], (function onMediaLoaded() {
         // Set lazyload images
         if (this.lazyload.length > 0) {
-          // Use window instead of document for IE8
-          addEventListenerFn(window, 'scroll', onLazyload);
+          addEventListenerFn(document, 'scroll', onLazyload);
         }
       }).bind(this));
     }).bind(this));

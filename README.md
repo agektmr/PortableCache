@@ -157,86 +157,95 @@ NOT IMPLEMENTED YET.
 For configuration, use `meta[name="portable-cache"]` explained at Declarative 
 APIs.
 
-### TBD
+### CacheEntry
+#### Properties
+##### url
+
+TBD
+
+##### src
+
+TBD
+
+##### tag
+
+TBD
+
+##### mimetype
+
+TBD
+
+##### version
+
+TBD
+
+##### content
+
+TBD
+
+##### elem
+
+TBD
+
+##### lazyload
+
+TBD
+
+#### Methods
+##### load(callback)
+
+TBD
+
+##### readCache(callback, errorCallback)
+
+TBD
+
+##### createCache(cacheExists, callback, errorCallback)
+
+TBD
+
+##### removeCache()
+
+TBD
+
+##### fetch(callback, errorCallback)
+
+TBD
+
+##### constructDOM(callback)
+
+TBD
+
+## Server side optimization
+
+PortableCache sends a version string of stored in cache as `pcache_version` in 
+cookie. Notably, if the browser is already proved to be unsupported, it carries 
+a string `NOT_SUPPORTED` instead of a version string. Use this cookie so your 
+server can serve an HTML without PortableCache.js in mind to avoid overheads.
+
 ## Browser Support
 
-<!-- TODO: Fix formatting of cells -->
-<table>
-<tr>
-<th>Browser</th>
-<th>Storage</th>
-<th>Lazy loading Images</th>
-<th>Responsive Images</th>
-</tr>
-<tr>
-<td>Chrome</td>
-<td>FileSystem API</td>
-<td>Supported</td>
-<td>TBD</td>
-</tr>
-<tr>
-<td>Firefox</td>
-<td>IndexedDB</td>
-<td>Supported</td>
-<td>TBD</td>
-</tr>
-<tr>
-<td>IE 6, 7, 8</td>
-<td>N/A</td>
-<td>N/A</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>IE 9</td>
-<td>LocalStorage</td>
-<td>Supported</td>
-<td>TBD</td>
-</tr>
-<tr>
-<td>IE 10, 11</td>
-<td>IndexedDB</td>
-<td>Supported</td>
-<td>TBD</td>
-</tr>
-<tr>
-<td>Android Browser 2.3</td>
-<td>WebSQL</td>
-<td>Supported</td>
-<td>TBD</td>
-</tr>
-<tr>
-<td>Android Browser 3</td>
-<td>Not confirmed</td>
-<td>Not confirmed</td>
-<td>Not confirmed</td>
-</tr>
-<tr>
-<td>Android Browser 4</td>
-<td>WebSQL</td>
-<td>Supported</td>
-<td>TBD</td>
-</tr>
-<tr>
-<td>Safari 5</td>
-<td>Not confirmed</td>
-<td>Not confirmed</td>
-<td>Not confirmed</td>
-</tr>
-<tr>
-<td>Safari 6</td>
-<td>Not confirmed</td>
-<td>Not confirmed</td>
-<td>Not confirmed</td>
-</tr>
-<tr>
-<td>Safari 7</td>
-<td>WebSQL</td>
-<td>Supported</td>
-<td>TBD</td>
-</tr>
-</table>
+Following browsers are supported by PortableCache.js.
 
-Browsers not listed here are yet to be tested.
+* Chrome (FileSystem API)
+* Firefox (IndexedDB)
+* IE 9 (LocalStorage)
+* IE 10, 11 (IndexedDB)
+* Android Browser 2.3 (WebSQL)
+* Android Browser 4 (WebSQL)
+* Safari 7 (WebSQL)
+
+Needs test on following browsers
+
+* Android Browser 3 (WebSQL)
+* Safari 5 (WebSQL)
+* Safari 6 (WebSQL)
+
+Following browsers are confirmed gracefully fallbacks on PortableCache.js
+
+* IE 6, 7, 8
+
+Browsers not listed here are either yet to be tested.
 
 ## Author
 
