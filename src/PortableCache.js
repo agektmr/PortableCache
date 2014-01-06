@@ -246,7 +246,7 @@ CacheEntry.prototype = {
 
     // If non-supported browser, or only lazyload is requested, fallback
     if (config['version'] == NOT_SUPPORTED || this.url === '') {
-      if (debug) console.log('[%s] falling back.', this.url);
+      if (debug) console.log('[%s] fallback without checking cache.', this.url);
       callback();
     // If previous version doesn't exist, fetch and construct;
     } else if (config['prev-version'] === null) {
@@ -254,26 +254,23 @@ CacheEntry.prototype = {
       this.fetch((function fetchResponse(data) {
         this.content  = data.content;
         this.mimetype = data.mimetype;
-        if (debug) console.log('[%s] fetch succeeded. cached and loading.', this.url);
         this.createCache(false, callback, errorFallback.bind(this));
       }).bind(this), errorFallback.bind(this));
     } else {
       // Read cache
       this.readCache((function onReadCache(data) {
         if (!data) {
-          // If cache doesn't exist
+          if (debug) console.log('[%s] cache not found. fetching...', this.url);
           this.fetch((function fetchResponse(data) {
             this.content  = data.content;
             this.mimetype = data.mimetype;
-            if (debug) console.log('[%s] fetch succeeded. cached and loading.', this.url);
             this.createCache(false, callback, errorFallback.bind(this));
           }).bind(this), errorFallback.bind(this));
         } else if (data.version !== this.version) {
-          // If cache is deprecated
+          if (debug) console.log('[%s] deprecated cache found. fetching...', this.url);
           this.fetch((function fetchResponse(data) {
             this.content  = data.content;
             this.mimetype = data.mimetype;
-            if (debug) console.log('[%s] fetch succeeded. cached and loading.', this.url);
             this.createCache(true, callback, errorFallback.bind(this));
           }).bind(this), errorFallback.bind(this));
         } else {
@@ -291,40 +288,50 @@ CacheEntry.prototype = {
     }
   },
   readCache: function(callback, errorCallback) {
-    storage.get(this, callback, errorCallback);
+    if (!storage) {
+      callback(null);
+    } else {
+      storage.get(this, callback, errorCallback);
+    }
   },
   createCache: function(cacheExists, callback, errorCallback) {
     // If cache already exists and storage is WebSQL, "update" instead of "set"
     var method = (cacheExists && storage instanceof sql) ? 'update' : 'set';
 
+    // It's possible storage failed on initialization and fallbacking.
+    if (!storage) {
+      callback();
     // At this point, this.content is either a text or an arraybuffer.
     // If received content is Blob and storage is not FileSystem, convert it to DataURL
-    if (storage instanceof fs) {
+    } else if (storage instanceof fs) {
       // TODO: store as Blob if Firefox
-      if (debug) console.log('[%s] Storing Blob to FileSystem.', this.url);
+      if (debug) console.log('[%s] creating Blob cache in FileSystem.', this.url);
       storage.set(this, callback, errorCallback);
     } else if (Blob && this.content instanceof Blob) {
       // Convert content to DataURL
-      if (debug) console.log('[%s] Converting Blob to DataURL using FileReader.', this.url);
+      if (debug) console.log('[%s] converting Blob to DataURL using FileReader.', this.url);
       var reader = new FileReader();
       reader.onload = (function onReaderLoad(event) {
-        if (debug) console.log('[%s] Storing DataURL.', this.url);
+        if (debug) console.log('[%s] creating DataURL cache.', this.url);
         this.content = event.target.result;
         storage[method](this, callback, errorCallback);
       }).bind(this);
       reader.readAsDataURL(this.content);
     } else if (this.content instanceof Array) {
       // For IE 9, convert VBArray generated array into DataURL
-      if (debug) console.log('[%s] Converting Blob to DataURL with manipulation.', this.url);
+      if (debug) console.log('[%s] converting Blob to DataURL with manipulation.', this.url);
       this.content = 'data:'+this.mimetype+';base64,'+base64encode(this.content);
+      if (debug) console.log('[%s] creating DataURL cache.', this.url);
       storage[method](this, callback, errorCallback);
     } else {
-      if (debug) console.log('[%s] Storing text.', this.url);
+      if (debug) console.log('[%s] creating text cache.', this.url);
       storage[method](this, callback, errorCallback);
     }
   },
   removeCache: function() {
-    storage.remove(this.url);
+    if (storage) {
+      storage.remove(this.url);
+    }
   },
   fetch: function(callback, errorCallback) {
     var xhr = new XMLHttpRequest();
@@ -348,16 +355,16 @@ CacheEntry.prototype = {
               if (xhr.responseType == 'blob') {
                 // Modern browsers
                 data.content = xhr.response;
-                if (debug) console.log('[%s] Loaded binary as Blob.', this.url);
+                if (debug) console.log('[%s] fetched binary as Blob.', this.url);
               } else if (xhr.responseType == 'arraybuffer') {
                 // For Android Browser 3.x~
                 data.content = createBlob(xhr.response, data.mimetype);
-                if (debug) console.log('[%s] Loaded binary as ArrayBuffer.', this.url);
+                if (debug) console.log('[%s] fetched binary as ArrayBuffer.', this.url);
               }
             } else if (typeof VBArray != 'undefined') {
               // For IE 9
               data.content = new VBArray(xhr.responseBody).toArray();
-              if (debug) console.log('[%s] Loaded binary using VBArray.', this.url);
+              if (debug) console.log('[%s] fetched binary using VBArray.', this.url);
             } else {
               // Android Browser 2.x
               var array = [];
@@ -367,11 +374,11 @@ CacheEntry.prototype = {
                 array.push(c & 0xff);
               }
               data.content = 'data:'+data.mimetype+';base64,'+base64encode(array);
-              if (debug) console.log('[%s] Loaded binary using text manipulation.', this.url);
+              if (debug) console.log('[%s] fetched binary using text manipulation.', this.url);
             }
           } else {
             data.content = xhr.responseText;
-            if (debug) console.log('[%s] Loaded text content.', this.url);
+            if (debug) console.log('[%s] fetched text content.', this.url);
           }
           callback(data);
         } else if (xhr.status === 0) {
@@ -402,45 +409,45 @@ CacheEntry.prototype = {
       case 'img':
         if (this.src) {
           this.elem.setAttribute('src', this.src);
-          if (debug) console.log('[%s] Replaced src of <%s>', this.url, this.tag);
+          if (debug) console.log('[%s] replaced src of <%s>', this.url, this.tag);
           callback();
         } else {
           this.elem.setAttribute('src', this.url);
-          if (debug) console.log('[%s] Fallback to <%s>', this.url, this.tag);
+          if (debug) console.log('[%s] fallback to <%s>', this.url, this.tag);
           addEventListenerFn(this.elem, 'load', callback);
         }
         break;
       case 'script':
         if (this.src) {
           this.elem.setAttribute('src', this.src);
-          if (debug) console.log('[%s] Replaced src of <script>', this.url);
+          if (debug) console.log('[%s] replaced src of <script>', this.url);
           callback();
         } else if (this.content) {
           this.elem.textContent = this.content;
-          if (debug) console.log('[%s] Inlined to <script>', this.url);
+          if (debug) console.log('[%s] inlined to <script>', this.url);
           callback();
           return;
         } else {
           this.elem.setAttribute('src', this.url);
-          if (debug) console.log('[%s] Fallback to <script>', this.url);
+          if (debug) console.log('[%s] fallback to <script>', this.url);
           addEventListenerFn(this.elem, 'load', callback);
         }
         break;
       case 'link':
         if (this.src) {
           this.elem.setAttribute('href', this.src);
-          if (debug) console.log('[%s] Replaced href of <link>', this.url);
+          if (debug) console.log('[%s] replaced href of <link>', this.url);
           callback();
         } else if (this.content) {
           this.tag = 'style';
           this.elem = document.createElement('style');
           this.elem.textContent = this.content;
           document.head.appendChild(this.elem);
-          if (debug) console.log('[%s] Inserted <style>', this.url);
+          if (debug) console.log('[%s] inserted <style>', this.url);
           callback();
         } else {
           this.elem.setAttribute('href', this.url);
-          if (debug) console.log('[%s] Fallback to <link>', this.url);
+          if (debug) console.log('[%s] fallback to <link>', this.url);
           addEventListenerFn(this.elem, 'load', callback);
         }
         break;
@@ -503,7 +510,11 @@ var CacheManager = function() {
     var errorCallback = function(errorMessage) {
       if (debug) console.error('%s Falling back.', errorMessage);
       storage = null;
-      addEventListenerFn(document, 'load', this.bootstrap.bind(this));
+      if (document.readyState == 'complete' || document.readyState == 'loaded') {
+        this.bootstrap();
+      } else {
+        addEventListenerFn(document, 'load', this.bootstrap.bind(this));
+      }
     };
 
     // Initialize best available storage
@@ -533,7 +544,7 @@ CacheManager.prototype = {
         this.loadLazyImages();
       } else {
         removeEventListenerFn(document, 'scroll', onLazyload);
-        if (debug) console.log('Lazyload done. Removed `document.onscroll` event');
+        if (debug) console.log('lazyload done. removed `scroll` event');
       }
     }).bind(this);
 
@@ -575,7 +586,6 @@ CacheManager.prototype = {
         cache.load((function onCacheLoaded(cache) {
           cache.constructDOM(function() {
             count++;
-            if (debug) console.log('[%s] loaded.', cache.url);
             if (typeof callback == 'function' && count == length) callback();
           });
         }).bind(this, cache));
@@ -759,8 +769,9 @@ idb.prototype = {
     req.onsuccess = function(e) {
       if (typeof callback == 'function') callback();
     };
-    req.onerror = function(e) {
-      if (typeof errorCallback == 'function') errorCallback('Error writing IndexedDB: '+e);
+    req.onerror = function() {
+      if (typeof errorCallback == 'function')
+        errorCallback('Error writing IndexedDB: '+req.error.name);
     };
   },
   get: function(_data, callback, errorCallback) {
@@ -775,8 +786,9 @@ idb.prototype = {
         callback(null);
       }
     };
-    req.onerror = function(e) {
-      if (typeof errorCallback == 'function') errorCallback('Error getting IndexedDB: '+e);
+    req.onerror = function() {
+      if (typeof errorCallback == 'function')
+        errorCallback('Error getting IndexedDB: '+req.error.name);
     };
   },
   remove: function(_data, callback, errorCallback) {
@@ -784,8 +796,9 @@ idb.prototype = {
     req.onsuccess = function(e) {
       if (typeof callback == 'function') callback();
     };
-    req.onerror = function(e) {
-      if (typeof errorCallback == 'function') errorCallback('Error removing IndexedDB: '+e);
+    req.onerror = function() {
+      if (typeof errorCallback == 'function')
+        errorCallback('Error removing IndexedDB: '+req.error.name);
     };
   }
 };
@@ -808,8 +821,9 @@ var sql = function(callback, errorCallback) {
         'mimetype    TEXT, '+
         'version     TEXT)');
       callback();
-    }, function onChangeVersionError(e) {
-      if (typeof errorCallback == 'function') errorCallback('Failed changing WebSQL version.');
+    }, function onChangeVersionError() {
+      if (typeof errorCallback == 'function')
+        errorCallback('Failed changing WebSQL version.');
     }, function onChangeVersionUpgraded() {
       if (debug) console.log('WebSQL Database upgraded.');
     });
@@ -829,7 +843,8 @@ sql.prototype = {
         if (typeof callback == 'function') callback();
       },
       function onExecuteSqlError(t, e) {
-        if (typeof errorCallback == 'function') errorCallback('Error writing WebSQL: '+e.message);
+        if (typeof errorCallback == 'function')
+          errorCallback('Error writing WebSQL: '+e.message);
       });
     });
   },
@@ -841,7 +856,8 @@ sql.prototype = {
         if (typeof callback == 'function') callback();
       },
       function onExecuteSqlError(t, e) {
-        if (typeof errorCallback == 'function') errorCallback('Error updating WebSQL: '+e.message);
+        if (typeof errorCallback == 'function')
+          errorCallback('Error updating WebSQL: '+e.message);
       });
     });
   },
@@ -881,7 +897,8 @@ sql.prototype = {
         if (typeof callback == 'function') callback();
       },
       function onExecuteSqlError(t, e) {
-        if (typeof errorCallback == 'function') errorCallback('Error removing WebSQL cache: '+e.message);
+        if (typeof errorCallback == 'function')
+          errorCallback('Error removing WebSQL cache: '+e.message);
       });
     });
   }
@@ -911,7 +928,8 @@ ls.prototype = {
         localStorage.setItem(_data.url, JSON.stringify(data));
         if (typeof callback == 'function') callback();
       } catch (e) {
-        if (typeof errorCallback == 'function') errorCallback('Error setting LocalStorage data: '+e);
+        if (typeof errorCallback == 'function')
+          errorCallback('Error setting LocalStorage data: '+e);
       }
     }, 0);
   },
@@ -924,7 +942,8 @@ ls.prototype = {
         }
         if (typeof callback == 'function') callback(data);
       } catch (e) {
-        if (typeof errorCallback == 'function') errorCallback('Error getting LocalStorage data: '+e);
+        if (typeof errorCallback == 'function')
+          errorCallback('Error getting LocalStorage data: '+e);
       }
     }, 0);
   },
@@ -934,7 +953,8 @@ ls.prototype = {
         localStorage.removeItem(_data.url);
         if (typeof callback == 'function') callback();
       } catch (e) {
-        if (typeof errorCallback == 'function') errorCallback('Error removing LocalStorage data: '+e);
+        if (typeof errorCallback == 'function')
+          errorCallback('Error removing LocalStorage data: '+e);
       }
     }, 0);
   }
