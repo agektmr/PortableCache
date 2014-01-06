@@ -17,7 +17,8 @@ var viewport = {
 var storage   = null,
     debug     = false;
 
-var SPACER_GIF = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==",
+var SPACER_GIF    = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==",
+    STORAGE_NAME  = 'PortableCache',
     NOT_SUPPORTED = 'NOT_SUPPORTED';
 
 var requestFileSystem = window.requestFileSystem ||
@@ -300,11 +301,11 @@ CacheEntry.prototype = {
     // If received content is Blob and storage is not FileSystem, convert it to DataURL
     if (storage instanceof fs) {
       // TODO: store as Blob if Firefox
-      if (debug) console.log('[%s] Storing Blob as is to FileSystem.', this.url);
+      if (debug) console.log('[%s] Storing Blob to FileSystem.', this.url);
       storage.set(this, callback, errorCallback);
     } else if (Blob && this.content instanceof Blob) {
       // Convert content to DataURL
-      if (debug) console.log('[%s] Converting Blob to DataURL using FileReader in order to store.', this.url);
+      if (debug) console.log('[%s] Converting Blob to DataURL using FileReader.', this.url);
       var reader = new FileReader();
       reader.onload = (function onReaderLoad(event) {
         if (debug) console.log('[%s] Storing DataURL.', this.url);
@@ -314,7 +315,7 @@ CacheEntry.prototype = {
       reader.readAsDataURL(this.content);
     } else if (this.content instanceof Array) {
       // For IE 9, convert VBArray generated array into DataURL
-      if (debug) console.log('[%s] Blob converted to DataURL with manipulation.', this.url);
+      if (debug) console.log('[%s] Converting Blob to DataURL with manipulation.', this.url);
       this.content = 'data:'+this.mimetype+';base64,'+base64encode(this.content);
       storage[method](this, callback, errorCallback);
     } else {
@@ -353,7 +354,7 @@ CacheEntry.prototype = {
                 data.content = createBlob(xhr.response, data.mimetype);
                 if (debug) console.log('[%s] Loaded binary as ArrayBuffer.', this.url);
               }
-            } else if (typeof VBArray !== 'undefined') {
+            } else if (typeof VBArray != 'undefined') {
               // For IE 9
               data.content = new VBArray(xhr.responseBody).toArray();
               if (debug) console.log('[%s] Loaded binary using VBArray.', this.url);
@@ -454,8 +455,9 @@ var CacheManager = function() {
   this.lazyload = [];
 
   // Load configuration and viewport
-  var _config = null, _viewport = null;
-  if (document.querySelectorAll) {
+  var _config = null,
+      _viewport = null;
+  if (document.querySelector) {
     _config = document.querySelector('meta[name="portable-cache"]');
     _viewport = document.querySelector('meta[name="viewport"]');
   } else {
@@ -486,21 +488,21 @@ var CacheManager = function() {
   // Debug mode
   debug = config['debug-mode'] !== 'no' && window.console ? true : false;
 
-  if (debug) console.log('PortableCache config:', config);
+  if (debug) console.log('Configuration loaded:', config);
 
   // Failing if any of these won't work
   if (config['prev-version'] == NOT_SUPPORTED ||
       document.querySelectorAll === undefined ||
       document.textContent === undefined ||
       document.head === undefined) {
-    if (debug) console.log('This browser is not supported. Falling back.');
+    if (debug) console.log('This browser is not supported.');
     config['version'] = NOT_SUPPORTED;
     addEventListenerFn(document, 'load', this.bootstrap.bind(this));
 
   } else {
-
     var errorCallback = function(errorMessage) {
       if (debug) console.error('%s Falling back.', errorMessage);
+      storage = null;
       addEventListenerFn(document, 'load', this.bootstrap.bind(this));
     };
 
@@ -518,7 +520,6 @@ var CacheManager = function() {
 
     if (!storage) {
       // No available storages found
-      config['version'] = NOT_SUPPORTED;
       if (debug) console.log('None of storages are available. Falling back.');
       addEventListenerFn(document, 'load', this.bootstrap.bind(this));
     }
@@ -628,65 +629,107 @@ CacheManager.prototype = {
 };
 
 var fs = function(callback, errorCallback) {
+  errorCallback = typeof errorCallback != 'function' ? function(){} : errorCallback;
+
+  if (!requestFileSystem) {
+    errorCallback('FileSystem not supported on this browser.');
+    return;
+  }
+
   this.fs = null;
   requestFileSystem(TEMPORARY, 1024 * 1024, (function(fs) {
     if (debug) console.log('FileSystem initialized');
     this.fs = fs;
     this.ls = new ls();
-    callback();
+    if (typeof callback == 'function') callback();
   }).bind(this), function(e) {
     errorCallback('Failed initializing FileSystem');
   });
 };
 fs.prototype = {
   set: function(_data, callback, errorCallback) {
+    var ls = this.ls;
+    errorCallback = typeof errorCallback != 'function' ? function(){} : errorCallback;
+  
     var fileName = _data.url.replace(/\/|\./g, '_');
-    this.fs.root.getFile(fileName, {create: true, exclusive: false}, (function(fileEntry) {
-      // TODO: create custom directory
-      fileEntry.createWriter((function(writer) {
-        writer.onwriteend = (function() {
-          _data.src = fileEntry.toURL();
-          var data = {
-            url:      _data.url,
-            src:      _data.src,
-            mimetype: _data.mimetype,
-            version:  _data.version
+    this.fs.root.getDirectory(STORAGE_NAME, {create: true, exclusive: false},
+    function onGetDirectory(directoryEntry) {
+      directoryEntry.getFile(fileName, {create: true, exclusive: false},
+      function onGetFile(fileEntry) {
+        fileEntry.createWriter(function onCreateWriter(writer) {
+          writer.onwriteend = function onWriteEnd() {
+            _data.src = fileEntry.toURL();
+            var data = {
+              url:      _data.url,
+              src:      _data.src,
+              mimetype: _data.mimetype,
+              version:  _data.version
+            };
+            ls.set(data, callback, errorCallback);
           };
-          this.ls.set(data);
-          if (typeof callback == 'function') callback();
-        }).bind(this);
 
-        writer.onerror = (function(e) {
-          errorCallback('Error writing FileSystem: '+e);
-        }).bind(this);
+          writer.onerror = function onFileWriteError(e) {
+            errorCallback('Error writing FileSystem: '+e);
+          };
 
-        if (typeof _data.content == 'string') {
-          writer.write(createBlob(_data.content, _data.mimetype));
-        } else {
-          writer.write(_data.content);
-        }
-
-      }).bind(this));
-    }).bind(this), (function(e) {
-      errorCallback('Failed setting content: '+e);
-    }).bind(this));
+          if (typeof _data.content == 'string') {
+            writer.write(createBlob(_data.content, _data.mimetype));
+          } else {
+            writer.write(_data.content);
+          }
+        });
+      },
+      function onGetFileError(e) {
+        errorCallback('Failed setting content: '+e);
+      });
+    },
+    function onGetDirectoryError(e) {
+      errorCallback('Failed getting directory: '+e);
+    });
   },
   get: function(_data, callback, errorCallback) {
     this.ls.get(_data, callback, errorCallback);
   },
   remove: function(_data, callback, errorCallback) {
-    // TODO;
+    var ls = this.ls;
+    errorCallback = typeof errorCallback != 'function' ? function(){} : errorCallback;
+  
+    var fileName = _data.url.replace(/\/|\./g, '_');
+    this.fs.root.getDirectory(STORAGE_NAME, {create: true, exclusive: false},
+    function onGetDirectory(directoryEntry) {
+      directoryEntry.getFile(fileName, {create: true, exclusive: false},
+      function onGetFile(fileEntry) {
+        fileEntry.remove(function onRemove() {
+          ls.remove(_data, callback, errorCallback);
+        }, function onRemoveError(e) {
+          errorCallback('Failed removing file: '+e);
+        });
+      },
+      function onGetFileError(e) {
+        errorCallback('Failed setting content: '+e);
+      });
+    },
+    function onGetDirectoryError(e) {
+      errorCallback('Failed getting directory: '+e);
+    });
   }
 };
 
 var idb = function(callback, errorCallback) {
+  errorCallback = typeof errorCallback != 'function' ? function(){} : errorCallback;
+
+  if (!indexedDB) {
+    errorCallback('IndexedDB not supported on this browser.');
+    return;
+  }
+
   this.db = null;
   this.version = 1;
-  var req = indexedDB.open('PortableCache', this.version);
+  var req = indexedDB.open(STORAGE_NAME, this.version);
   req.onsuccess = (function(e) {
     if (debug) console.log('IndexedDB initialized');
     this.db = e.target.result;
-    callback();
+    if (typeof callback == 'function') callback();
   }).bind(this);
   req.onblocked = function(e) {
     errorCallback('Opening IndexedDB blocked: '+e.target.error.message);
@@ -717,79 +760,98 @@ idb.prototype = {
       if (typeof callback == 'function') callback();
     };
     req.onerror = function(e) {
-      errorCallback('Error writing IndexedDB: '+e);
+      if (typeof errorCallback == 'function') errorCallback('Error writing IndexedDB: '+e);
     };
   },
   get: function(_data, callback, errorCallback) {
+    callback = typeof callback != 'function' ? function(){} : callback;
+
     var req = this.db.transaction(['cache'], 'readonly').objectStore('cache').get(_data.url);
     req.onsuccess = function(e) {
       if (e.target.result) {
         var data = e.target.result;
-        // make sure 'url' callbacks as empty string
         callback(data);
       } else {
         callback(null);
       }
     };
     req.onerror = function(e) {
-      errorCallback('Error getting IndexedDB: '+e);
+      if (typeof errorCallback == 'function') errorCallback('Error getting IndexedDB: '+e);
     };
   },
   remove: function(_data, callback, errorCallback) {
-    // TODO;
+    var req = this.db.transaction(['cache'], 'readwrite').objectStore('cache').delete(_data.url);
+    req.onsuccess = function(e) {
+      if (typeof callback == 'function') callback();
+    };
+    req.onerror = function(e) {
+      if (typeof errorCallback == 'function') errorCallback('Error removing IndexedDB: '+e);
+    };
   }
 };
 
 var sql = function(callback, errorCallback) {
-  this.db = openDatabase('PortableCache', '', 'cache', 1024 * 1024);
+  callback = typeof callback != 'function' ? function(){} : callback;
+
+  if (!openDatabase) {
+    errorCallback('WebSQL not supported on this browser.');
+    return;
+  }
+
   this.version = '1.0';
+  this.db = openDatabase(STORAGE_NAME, '', 'cache', 1024 * 1024);
   if (this.db.version !== this.version) {
-    this.db.changeVersion(this.db.version, this.version, (function sqlOnChangeVersion(transaction) {
-      transaction.executeSql('CREATE TABLE cache ('+
+    this.db.changeVersion(this.db.version, this.version, function onChangeVersion(t) {
+      t.executeSql('CREATE TABLE cache ('+
         'url         TEXT PRIMARY KEY, '+
         'content     TEXT, '+
         'mimetype    TEXT, '+
         'version     TEXT)');
       callback();
-    }).bind(this), function sqlOnChangeVersionError(e) {
-      errorCallback('Failed changing WebSQL version.');
-    }, function sqlOnChangeVersionUpgraded() {
+    }, function onChangeVersionError(e) {
+      if (typeof errorCallback == 'function') errorCallback('Failed changing WebSQL version.');
+    }, function onChangeVersionUpgraded() {
       if (debug) console.log('WebSQL Database upgraded.');
     });
   } else {
     if (debug) console.log('WebSQL Database initialized.');
-    setTimeout((function() {
+    setTimeout(function() {
       callback();
-    }).bind(this), 0);
+    }, 0);
   }
 };
 sql.prototype = {
   set: function(_data, callback, errorCallback) {
-    var data = [ _data.url, _data.content, _data.mimetype, _data.version ];
-    this.db.transaction((function sqlOnTransaction(transaction) {
-      transaction.executeSql('INSERT INTO cache (url, content, mimetype, version) '+
-          'VALUES(?, ?, ?, ?)', data, (function sqlOnExecuteSql(transaction, results) {
+    this.db.transaction(function onTransaction(t) {
+      t.executeSql('INSERT INTO cache (url, content, mimetype, version) VALUES(?, ?, ?, ?)',
+      [ _data.url, _data.content, _data.mimetype, _data.version ],
+      function onExecuteSql(t, results) {
         if (typeof callback == 'function') callback();
-      }).bind(this), (function sqlOnTransactionError(e) {
-        errorCallback('Error writing WebSQL: '+e.message);
-      }).bind(this));
-    }).bind(this));
+      },
+      function onExecuteSqlError(t, e) {
+        if (typeof errorCallback == 'function') errorCallback('Error writing WebSQL: '+e.message);
+      });
+    });
   },
   update: function(_data, callback, errorCallback) {
-    var data = [_data.mimetype, _data.content, _data.version, _data.url ];
-    this.db.transaction((function sqlOnTransaction(transaction) {
-      transaction.executeSql('UPDATE cache SET mimetype=?, content=?, version=? '+
-          'WHERE url=?', data, (function sqlOnExecuteSql(transaction, results) {
+    this.db.transaction(function onTransaction(t) {
+      t.executeSql('UPDATE cache SET mimetype=?, content=?, version=? WHERE url=?',
+      [ _data.mimetype, _data.content, _data.version, _data.url ],
+      function onExecuteSql(t, results) {
         if (typeof callback == 'function') callback();
-      }).bind(this), (function sqlOnTransactionError(t, e) {
-        errorCallback('Error updating WebSQL: '+e.message);
-      }).bind(this));
-    }).bind(this));
+      },
+      function onExecuteSqlError(t, e) {
+        if (typeof errorCallback == 'function') errorCallback('Error updating WebSQL: '+e.message);
+      });
+    });
   },
   get: function(_data, callback, errorCallback) {
-    this.db.readTransaction((function sqlOnReadTransaction(transaction) {
-      transaction.executeSql('SELECT * FROM cache WHERE url=?', [_data.url],
-          (function sqlOnExecuteSql(transaction, results) {
+    callback = typeof callback != 'function' ? function(){} : callback;
+    errorCallback = typeof errorCallback != 'function' ? function(){} : errorCallback;
+
+    this.db.readTransaction(function onReadTransaction(t) {
+      t.executeSql('SELECT * FROM cache WHERE url=?', [ _data.url ],
+      function onExecuteSql(t, results) {
         if (results.rows.length > 0) {
           var result = results.rows.item(0);
           // copy result since you can't change it as it is
@@ -805,19 +867,33 @@ sql.prototype = {
         } else {
           errorCallback('Error getting WebSQL data.');
         }
-      }).bind(this), (function sqlOnExecuteSqlError(e) {
+      },
+      function onExecuteSqlError(t, e) {
         errorCallback('Error getting WebSQL data: '+e.message);
-      }).bind(this));
-    }).bind(this), (function sqlOnReadTransactionError(e) {
-      errorCallback('Error getting WebSQL data: '+e.message);
-    }).bind(this));
+      });
+    });
   },
   remove: function(_data, callback, errorCallback) {
-    // TODO;
+    this.db.transaction(function onTransaction(t) {
+      t.executeSql('DELETE FROM cache WHERE url=?', [_data.url],
+      function onExecuteSql(t, results) {
+        if (debug) console.log('[%s] Cache removed from WebSQL.', _data.url);
+        if (typeof callback == 'function') callback();
+      },
+      function onExecuteSqlError(t, e) {
+        if (typeof errorCallback == 'function') errorCallback('Error removing WebSQL cache: '+e.message);
+      });
+    });
   }
 };
 
 var ls = function(callback, errorCallback) {
+  if (!localStorage) {
+    if (typeof errorCallback == 'function')
+      errorCallback('LocalStorage not supported on this browser.');
+    return;
+  }
+
   setTimeout(function() {
     if (typeof callback == 'function') callback();
   }, 0);
@@ -834,8 +910,8 @@ ls.prototype = {
       try {
         localStorage.setItem(_data.url, JSON.stringify(data));
         if (typeof callback == 'function') callback();
-      } catch(e) {
-        errorCallback('Error setting LocalStorage data: '+e);
+      } catch (e) {
+        if (typeof errorCallback == 'function') errorCallback('Error setting LocalStorage data: '+e);
       }
     }, 0);
   },
@@ -846,14 +922,21 @@ ls.prototype = {
         if (data) {
           data = JSON.parse(data);
         }
-        callback(data);
-      } catch(e) {
-        errorCallback('Error getting LocalStorage data: '+e);
+        if (typeof callback == 'function') callback(data);
+      } catch (e) {
+        if (typeof errorCallback == 'function') errorCallback('Error getting LocalStorage data: '+e);
       }
     }, 0);
   },
   remove: function(_data, callback, errorCallback) {
-    // TODO;
+    setTimeout(function localStorageRemove() {
+      try {
+        localStorage.removeItem(_data.url);
+        if (typeof callback == 'function') callback();
+      } catch (e) {
+        if (typeof errorCallback == 'function') errorCallback('Error removing LocalStorage data: '+e);
+      }
+    }, 0);
   }
 };
 

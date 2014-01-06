@@ -58,100 +58,33 @@
 
       <h2>Browser Support</h2>
 
-      <table class="table table-bordered">
-      <tr>
-      <th>Browser</th>
-      <th>Storage</th>
-      <th>Lazy loading Images</th>
-      <th>Responsive Images</th>
-      </tr>
-      <tr>
-      <td>Chrome</td>
-      <td>FileSystem API</td>
-      <td>Supported</td>
-      <td>TBD</td>
-      </tr>
-      <tr>
-      <td>Firefox</td>
-      <td>IndexedDB</td>
-      <td>Supported</td>
-      <td>TBD</td>
-      </tr>
-      <tr>
-      <td>IE 6, 7, 8</td>
-      <td>N/A</td>
-      <td>N/A</td>
-      <td>N/A</td>
-      </tr>
-      <tr>
-      <td>IE 9</td>
-      <td>LocalStorage</td>
-      <td>Supported</td>
-      <td>TBD</td>
-      </tr>
-      <tr>
-      <td>IE 10, 11</td>
-      <td>IndexedDB</td>
-      <td>Supported</td>
-      <td>TBD</td>
-      </tr>
-      <tr>
-      <td>Android Browser 2.3</td>
-      <td>WebSQL</td>
-      <td>Supported</td>
-      <td>TBD</td>
-      </tr>
-      <tr>
-      <td>Android Browser 3</td>
-      <td>Not confirmed</td>
-      <td>Not confirmed</td>
-      <td>Not confirmed</td>
-      </tr>
-      <tr>
-      <td>Android Browser 4.0</td>
-      <td>WebSQL</td>
-      <td>Supported</td>
-      <td>TBD</td>
-      </tr>
-      <tr>
-      <td>Android Browser 4.1</td>
-      <td>Not confirmed</td>
-      <td>Not confirmed</td>
-      <td>Not confirmed</td>
-      </tr>
-      <tr>
-      <td>Android Browser 4.2</td>
-      <td>Not confirmed</td>
-      <td>Not confirmed</td>
-      <td>Not confirmed</td>
-      </tr>
-      <tr>
-      <td>Android Browser 4.3</td>
-      <td>WebSQL</td>
-      <td>Supported</td>
-      <td>TBD</td>
-      </tr>
-      <tr>
-      <td>Safari 5</td>
-      <td>Not confirmed</td>
-      <td>Not confirmed</td>
-      <td>Not confirmed</td>
-      </tr>
-      <tr>
-      <td>Safari 6</td>
-      <td>Not confirmed</td>
-      <td>Not confirmed</td>
-      <td>Not confirmed</td>
-      </tr>
-      <tr>
-      <td>Safari 7</td>
-      <td>WebSQL</td>
-      <td>Supported</td>
-      <td>TBD</td>
-      </tr>
-</table>
+      <p>Following browsers are supported by PortableCache.js.</p>
 
-      <p>* Browsers not listed here are yet to test.</p>
+      <ul>
+      <li>Chrome (FileSystem API)</li>
+      <li>Firefox (IndexedDB)</li>
+      <li>IE 9 (LocalStorage)</li>
+      <li>IE 10, 11 (IndexedDB)</li>
+      <li>Android Browser 2.3 (WebSQL)</li>
+      <li>Android Browser 4 (WebSQL)</li>
+      <li>Safari 7 (WebSQL)</li>
+      </ul>
+
+      <p>Needs test on following browsers</p>
+
+      <ul>
+      <li>Android Browser 3 (WebSQL)</li>
+      <li>Safari 5 (WebSQL)</li>
+      <li>Safari 6 (WebSQL)</li>
+      </ul>
+
+      <p>Following browsers are confirmed gracefully fallbacks on PortableCache.js</p>
+
+      <ul>
+      <li>IE 6, 7, 8</li>
+      </ul>
+
+      <p>Browsers not listed here are either yet to be tested.</p>
 
       <h2>Example Image Stabs</h2>
       <img data-cache-url="img/abstract1_640x428.jpg" class="img-responsive" alt="" lazyload>

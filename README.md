@@ -111,7 +111,7 @@ adding `lazyload` attribute.
 
 ### Responsive images
 
-You can load responsive image by using `src-set` semantics to 
+You can load responsive image by using `srcset` semantics to 
 `img[data-cache-url]`.  
 NOT IMPLEMENTED YET.
 
