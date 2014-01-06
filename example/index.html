@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <meta name="portable-cache" content="version=20131226, debug-mode=yes">
     <link rel="stylesheet" data-cache-url="lib/bootstrap/bootstrap.css">
+    <link rel="stylesheet" data-cache-url="css/united.css">
     <script src="../src/PortableCache.js"></script>
     <!--script>
       document.addEventListener('load', function(e) {
@@ -31,15 +32,15 @@
         <a href="http://github.com/agektmr/PortableCache.js" target="_blank" class="btn btn-primary">View on Github</a>
       </div>
       <h2>What is PortableCache.js?</h2>
-      <p>PortableCache.js (PCache) is a resource loader with mobile browsers in mind.</p>
+      <p>PortableCache.js is a resource loader with mobile browsers in mind.</p>
       <ul>
         <li>Declarative APIs.</li>
-        <li><p>Uses the best available storage on user's browser:</p>
+        <li>Uses the best available storage on user's browser:
           <ul><li>FileSystem</li>
           <li>IndexedDB</li>
           <li>WebSQL</li>
           <li>LocalStorage</li></ul></li>
-        <li><p>Falls back gracefully when storage is not available.</p></li>
+        <li>Falls back gracefully when storage is not available.</li>
         <li>Supports lazyload image.</li>
         <li>Supports responsive images (NOT IMPLEMENTED YET).</li>
       </ul>
@@ -57,52 +58,102 @@
 
       <h2>Browser Support</h2>
 
-      <table class="table table-bordered"><tr><th>Browser</th>
+      <table class="table table-bordered">
+      <tr>
+      <th>Browser</th>
       <th>Storage</th>
       <th>Lazy loading Images</th>
       <th>Responsive Images</th>
       </tr>
-      <tr><td>Chrome</td>
+      <tr>
+      <td>Chrome</td>
       <td>FileSystem API</td>
       <td>Supported</td>
       <td>TBD</td>
       </tr>
-      <tr><td>Firefox</td>
+      <tr>
+      <td>Firefox</td>
       <td>IndexedDB</td>
       <td>Supported</td>
       <td>TBD</td>
       </tr>
-      <tr><td>Android Browser 4.3</td>
-      <td>WebSQL</td>
-      <td>Supported</td>
-      <td>TBD</td>
-      </tr>
-      <tr><td>IE 6, 7</td>
+      <tr>
+      <td>IE 6, 7, 8</td>
       <td>N/A</td>
       <td>N/A</td>
       <td>N/A</td>
       </tr>
-      <tr><td>IE 8, 9</td>
+      <tr>
+      <td>IE 9</td>
       <td>LocalStorage</td>
       <td>Supported</td>
       <td>TBD</td>
       </tr>
-      <tr><td>IE 10, 11</td>
+      <tr>
+      <td>IE 10, 11</td>
       <td>IndexedDB</td>
       <td>Supported</td>
       <td>TBD</td>
       </tr>
-      <tr><td>Safari 7</td>
+      <tr>
+      <td>Android Browser 2.3</td>
       <td>WebSQL</td>
       <td>Supported</td>
       <td>TBD</td>
       </tr>
-      </table>
+      <tr>
+      <td>Android Browser 3</td>
+      <td>Not confirmed</td>
+      <td>Not confirmed</td>
+      <td>Not confirmed</td>
+      </tr>
+      <tr>
+      <td>Android Browser 4.0</td>
+      <td>WebSQL</td>
+      <td>Supported</td>
+      <td>TBD</td>
+      </tr>
+      <tr>
+      <td>Android Browser 4.1</td>
+      <td>Not confirmed</td>
+      <td>Not confirmed</td>
+      <td>Not confirmed</td>
+      </tr>
+      <tr>
+      <td>Android Browser 4.2</td>
+      <td>Not confirmed</td>
+      <td>Not confirmed</td>
+      <td>Not confirmed</td>
+      </tr>
+      <tr>
+      <td>Android Browser 4.3</td>
+      <td>WebSQL</td>
+      <td>Supported</td>
+      <td>TBD</td>
+      </tr>
+      <tr>
+      <td>Safari 5</td>
+      <td>Not confirmed</td>
+      <td>Not confirmed</td>
+      <td>Not confirmed</td>
+      </tr>
+      <tr>
+      <td>Safari 6</td>
+      <td>Not confirmed</td>
+      <td>Not confirmed</td>
+      <td>Not confirmed</td>
+      </tr>
+      <tr>
+      <td>Safari 7</td>
+      <td>WebSQL</td>
+      <td>Supported</td>
+      <td>TBD</td>
+      </tr>
+</table>
 
       <p>* Browsers not listed here are yet to test.</p>
 
       <h2>Example Image Stabs</h2>
-      <p>Photos by <a href="http://www.flickr.com/photos/zb">Gregor Hochmuth</a></p>
       <img data-cache-url="img/abstract1_640x428.jpg" class="img-responsive" alt="" lazyload>
       <p>Photo by <a href="http://www.flickr.com/photos/jimnix/4971254545/">Jim Nix / Nomadic</a></p>
       <img data-cache-url="img/abstract2_640x441.jpg" class="img-responsive" alt="" lazyload>

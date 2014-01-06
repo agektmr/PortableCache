@@ -4,7 +4,7 @@ Cache assets, reduce downloads, load faster.
 
 ## What is PortableCache.js?
 
-PortableCache.js (PCache) is a resource loader with mobile browsers in mind.
+PortableCache.js is a resource loader with mobile browsers in mind.
 
 * Declarative APIs.
 * Uses the best available storage on user's browser:
@@ -45,10 +45,10 @@ attribute accepts comma separated parameters as listed below.
 <!-- TODO: Fix formatting of cells -->
 <table>
 <tr>
-<td>Key</td>
-<td>Value</td>
-<td>Default</td>
-<td></td>
+<th>Key</th>
+<th>Value</th>
+<th>Default</th>
+<th>Details</th>
 </tr>
 <tr>
 <td>version</td>
@@ -163,10 +163,10 @@ APIs.
 <!-- TODO: Fix formatting of cells -->
 <table>
 <tr>
-<td>Browser</td>
-<td>Storage</td>
-<td>Lazy loading Images</td>
-<td>Responsive Images</td>
+<th>Browser</th>
+<th>Storage</th>
+<th>Lazy loading Images</th>
+<th>Responsive Images</th>
 </tr>
 <tr>
 <td>Chrome</td>
@@ -181,19 +181,13 @@ APIs.
 <td>TBD</td>
 </tr>
 <tr>
-<td>Android Browser 4.3</td>
-<td>WebSQL</td>
-<td>Supported</td>
-<td>TBD</td>
-</tr>
-<tr>
-<td>IE 6, 7</td>
+<td>IE 6, 7, 8</td>
 <td>N/A</td>
 <td>N/A</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>IE 8, 9</td>
+<td>IE 9</td>
 <td>LocalStorage</td>
 <td>Supported</td>
 <td>TBD</td>
@@ -205,6 +199,36 @@ APIs.
 <td>TBD</td>
 </tr>
 <tr>
+<td>Android Browser 2.3</td>
+<td>WebSQL</td>
+<td>Supported</td>
+<td>TBD</td>
+</tr>
+<tr>
+<td>Android Browser 3</td>
+<td>Not confirmed</td>
+<td>Not confirmed</td>
+<td>Not confirmed</td>
+</tr>
+<tr>
+<td>Android Browser 4</td>
+<td>WebSQL</td>
+<td>Supported</td>
+<td>TBD</td>
+</tr>
+<tr>
+<td>Safari 5</td>
+<td>Not confirmed</td>
+<td>Not confirmed</td>
+<td>Not confirmed</td>
+</tr>
+<tr>
+<td>Safari 6</td>
+<td>Not confirmed</td>
+<td>Not confirmed</td>
+<td>Not confirmed</td>
+</tr>
+<tr>
 <td>Safari 7</td>
 <td>WebSQL</td>
 <td>Supported</td>
@@ -212,7 +236,7 @@ APIs.
 </tr>
 </table>
 
-* Browsers not listed here are yet to test.
+Browsers not listed here are yet to be tested.
 
 ## Author
 
