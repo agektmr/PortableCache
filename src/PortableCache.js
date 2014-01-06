@@ -239,8 +239,8 @@ var CacheEntry = function(entry) {
 };
 CacheEntry.prototype = {
   load: function(callback) {
-    var errorFallback = function(errorMessage) {
-      if (debug) console.error('[%s] %s falling back.', errorMessage, this.url);
+    var errorCallback = function(errorMessage) {
+      if (debug) console.log('[%s] %s falling back.', errorMessage, this.url);
       callback();
     };
 
@@ -254,8 +254,8 @@ CacheEntry.prototype = {
       this.fetch((function fetchResponse(data) {
         this.content  = data.content;
         this.mimetype = data.mimetype;
-        this.createCache(false, callback, errorFallback.bind(this));
-      }).bind(this), errorFallback.bind(this));
+        this.createCache(false, callback, errorCallback.bind(this));
+      }).bind(this), errorCallback.bind(this));
     } else {
       // Read cache
       this.readCache((function onReadCache(data) {
@@ -264,15 +264,15 @@ CacheEntry.prototype = {
           this.fetch((function fetchResponse(data) {
             this.content  = data.content;
             this.mimetype = data.mimetype;
-            this.createCache(false, callback, errorFallback.bind(this));
-          }).bind(this), errorFallback.bind(this));
+            this.createCache(false, callback, errorCallback.bind(this));
+          }).bind(this), errorCallback.bind(this));
         } else if (data.version !== this.version) {
           if (debug) console.log('[%s] deprecated cache found. fetching...', this.url);
           this.fetch((function fetchResponse(data) {
             this.content  = data.content;
             this.mimetype = data.mimetype;
-            this.createCache(true, callback, errorFallback.bind(this));
-          }).bind(this), errorFallback.bind(this));
+            this.createCache(true, callback, errorCallback.bind(this));
+          }).bind(this), errorCallback.bind(this));
         } else {
           // If cache exists and is still valid
           this.src      = data.src || '';
@@ -508,7 +508,7 @@ var CacheManager = function() {
 
   } else {
     var errorCallback = function(errorMessage) {
-      if (debug) console.error('%s Falling back.', errorMessage);
+      if (debug) console.log('%s Falling back.', errorMessage);
       storage = null;
       if (document.readyState == 'complete' || document.readyState == 'loaded') {
         this.bootstrap();
@@ -653,7 +653,7 @@ var fs = function(callback, errorCallback) {
     this.ls = new ls();
     if (typeof callback == 'function') callback();
   }).bind(this), function(e) {
-    errorCallback('Failed initializing FileSystem');
+    errorCallback('Failed initializing FileSystem.');
   });
 };
 fs.prototype = {
@@ -807,7 +807,10 @@ var sql = function(callback, errorCallback) {
   callback = typeof callback != 'function' ? function(){} : callback;
 
   if (!openDatabase) {
-    errorCallback('WebSQL not supported on this browser.');
+    // Avoid failure on 'load' event after fallback. Needs to figure out what's going on...
+    setTimeout(function() {
+      errorCallback('WebSQL not supported on this browser.');
+    }, 0);
     return;
   }
 
