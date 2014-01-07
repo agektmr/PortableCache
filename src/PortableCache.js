@@ -510,7 +510,9 @@ var CacheManager = function() {
     var errorCallback = function(errorMessage) {
       if (debug) console.log('%s Falling back.', errorMessage);
       storage = null;
-      if (document.readyState == 'complete' || document.readyState == 'loaded') {
+      if (document.readyState == 'complete' ||
+          document.readyState == 'interactive' ||
+          document.readyState == 'loaded') {
         this.bootstrap();
       } else {
         addEventListenerFn(document, 'load', this.bootstrap.bind(this));
@@ -597,8 +599,8 @@ CacheManager.prototype = {
   loadLazyImages: function() {
     var scrollY = window.pageYOffset || document.documentElement.scrollTop;
     var pageHeight = window.innerHeight || document.documentElement.clientHeight;
-    var min = scrollY - (pageHeight/2);
-    var max = scrollY + ~~(pageHeight*1.5);
+    var min = scrollY - (pageHeight/4);
+    var max = scrollY + ~~(pageHeight*1.25);
     for (var i = 0; i < this.lazyload.length; i++) {
       var cache = this.lazyload[i];
       var elemY = cache.elem.offsetTop;
