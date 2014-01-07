@@ -2,6 +2,8 @@
 
 Cache assets, reduce downloads, load faster.
 
+[![Analytics](https://ga-beacon.appspot.com/UA-46910666-1/agektmr/PortableCache.js)](https://github.com/igrigorik/ga-beacon)
+
 ## What is PortableCache.js?
 
 PortableCache.js is a resource loader with mobile browsers in mind.
