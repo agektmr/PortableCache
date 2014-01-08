@@ -1,7 +1,6 @@
 # PortableCache.js
 
-Cache assets, reduce downloads, load faster.
-
+Cache assets, reduce downloads, load faster.  
 [![Analytics](https://ga-beacon.appspot.com/UA-46910666-1/agektmr/PortableCache.js)](https://github.com/igrigorik/ga-beacon)
 
 ## What is PortableCache.js?
@@ -28,10 +27,10 @@ You can quickly try out this library by following 3 steps.
 
 1. Insert following `meta` tag to your existing project's `head` tag.<br/>
    `<meta name="portable-cache" content="version=20131228">`
-1. Insert `script` tag to load PortableCache.js (Make sure it is below 
+1. Insert `script` tag to load `portable-cache.min.js` (Make sure it is below 
    `meta[name=""portable-cache]`).<br/>
    `<script 
-   src="https://raw.github.com/agektmr/PortableCache.js/master/src/PortableCache.js">`
+   src="https://raw.github.com/agektmr/PortableCache.js/0.6.0/dist/portable-cache.min.js">`
 1. Replace attribute name of resources you'd like to cache to 
    `data-cache-url`.<br/>
    `<img src="img/image.jpg">`<br/>
@@ -63,6 +62,12 @@ attribute accepts comma separated parameters as listed below.
 <td>(auto|filesystem|idb|sql|localstorage)</td>
 <td>'auto'</td>
 <td>Optional. Preferred storage to use. If the preferred storage is not available on the browser, PCache gracefully falls back.</td>
+</tr>
+<tr>
+<td>root-path</td>
+<td>string</td>
+<td>''</td>
+<td>Optional. Cache version usually is tied to the URL path you are on. Give it a root path when you want the cache to be accessible from multiple locations.</td>
 </tr>
 <tr>
 <td>responsive-image</td>
@@ -161,37 +166,45 @@ APIs.
 
 ### CacheEntry
 #### Properties
+##### id
+
+ID of this cache.
+
 ##### url
 
-TBD
+URL of this resource that can replace src.
 
 ##### src
 
-TBD
+Source URL to be replaced with (src|href)
 
 ##### tag
 
-TBD
+HTML tag associated
+
+##### type
+
+Request type on XHR (binary|json|text)
 
 ##### mimetype
 
-TBD
+MIME Type of remote resource.
 
 ##### version
 
-TBD
+Cache version string.
 
 ##### content
 
-TBD
+Resource content which is either Blob or text.
 
 ##### elem
 
-TBD
+Original DOM Element.
 
 ##### lazyload
 
-TBD
+Boolean value that indicates if lazyload is requested.
 
 #### Methods
 ##### load(callback)
@@ -217,6 +230,13 @@ TBD
 ##### constructDOM(callback)
 
 TBD
+
+##### getContentAs(type, callback, errorCallback)
+
+TBD  
+**Events**  
+PortableCache fires `pcache-ready` event after loading `link` and `script` 
+resources.
 
 ## Server side optimization
 
