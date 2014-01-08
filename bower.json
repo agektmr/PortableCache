@@ -1,7 +1,7 @@
 {
   "name": "PortableCache.js",
-  "version": "0.5.0",
-  "main": "src/PortableCache.js",
+  "version": "0.6.0",
+  "main": "dist/portable-cache.min.js",
   "dependencies": {},
   "repository": {
     "type": "git",

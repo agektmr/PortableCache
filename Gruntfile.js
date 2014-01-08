@@ -20,7 +20,7 @@ module.exports = function(grunt) {
     banner: '/*! <%= pkg.title || pkg.name %> - v<%= pkg.version %> - ' +
       '<%= grunt.template.today("yyyy-mm-dd") %>\n' +
       '<%= pkg.homepage ? "* " + pkg.homepage + "\\n" : "" %>' +
-      '* Copyright (c) <%= grunt.template.today("yyyy") %> <%= pkg.author.name %>;' +
+      '* Copyright (c) <%= grunt.template.today("yyyy") %> <%= pkg.author %>;' +
       ' Licensed <%= _.pluck(pkg.licenses, "type").join(", ") %> */\n',
     // Task configuration.
     concat: {
@@ -29,17 +29,28 @@ module.exports = function(grunt) {
         stripBanners: true
       },
       dist: {
-        src: ['lib/<%= pkg.name %>.js'],
-        dest: 'dist/<%= pkg.name %>.js'
+        src: [
+         'src/portable-cache.prefix',
+         'src/portable-cache.js',
+         'src/portable-cache.suffix'
+        ],
+        dest: 'dist/portable-cache.js'
       }
     },
     uglify: {
       options: {
-        banner: '<%= banner %>'
+        banner: '<%= banner %>',
+        compress: {
+          global_defs: {
+            "__debug": false
+          },
+          dead_code: true
+        }
       },
-      dist: {
-        src: '<%= concat.dist.dest %>',
-        dest: 'dist/<%= pkg.name %>.min.js'
+      my_target: {
+        files: {
+          'dist/portable-cache.min.js': ['<%= concat.dist.dest %>']
+        }
       }
     },
     jshint: {
@@ -71,18 +82,15 @@ module.exports = function(grunt) {
       files: ['test/**/*.html']
     },
     watch: {
-      gruntfile: {
-        files: '<%= jshint.gruntfile.src %>',
-        tasks: ['jshint:gruntfile']
-      },
-      lib_test: {
-        files: '<%= jshint.lib_test.src %>',
-        tasks: ['jshint:lib_test', 'qunit']
-      }
+      files: [
+        'Gruntfile.js',
+        'src/*'
+      ],
+      tasks: ['compress']
     },
     jsdoc: {
       dist: {
-        src: ['src/PortableCache2.js'],
+        src: ['src/portable-cache.js'],
         options: {
           destination: 'doc'
         }
@@ -100,7 +108,7 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-jsdoc');
 
   // Default task.
-  grunt.registerTask('default', ['jshint', 'qunit', 'concat', 'uglify']);
+  grunt.registerTask('compress', ['concat', 'uglify']);
   grunt.registerTask('install', ['bower']);
   grunt.registerTask('doc', ['jsdoc']);
 
