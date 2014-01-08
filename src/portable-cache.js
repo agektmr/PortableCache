@@ -1,6 +1,7 @@
 var config = {
   'version':            '',
   'responsive-image':   'no',
+  'root-path':          '',
   'preferred-storage':  'auto',
   'debug-mode':         'no'
 };
@@ -136,6 +137,30 @@ var parseMetaContent = function(content, obj) {
   return obj;
 };
 
+var canonicalizePath = function(path) {
+  if (path.indexOf('http') === 0 || path.indexOf('//') === 0) return path;
+
+  var trim = function(s) {
+    return s==''?false:true;
+  }
+  var prefix_ = location.pathname.split('/').filter(trim);
+  var path_ = path.split('/');
+  do {
+    switch (path_[0]) {
+      case '..':
+        prefix_ = prefix_.slice(0, -1);
+        path_ = path_.slice(1);
+        break;
+      case '.':
+      case '':
+        path_ = path_.slice(1);
+        break;
+    }
+  } while (path_[0] == '..');
+  path_ = prefix_.concat(path_);
+  return '/'+path_.join('/');
+};
+
 var addEventListenerFn = (window.document.addEventListener ?
     function(element, type, fn) { element.addEventListener(type, fn); } :
     function(element, type, fn) { element.attachEvent('on'+type, fn); });
@@ -207,24 +232,25 @@ var Cookies = {
  * @param {Object|HTMLElement} data   data object that 
  */
 var CacheEntry = function(entry) {
-  this.src      = '';
-  this.content  = '';
-  this.mimetype = '';
-  this.lazyload = false;
+  this.src        = '';
+  this.content    = '';
+  this.mimetype   = '';
+  this.lazyload   = false;
 
   // Check if this is an HTMLElement instance
   if (entry.nodeName) {
     // If entry is an HTMLElement, all properties will be derived from the element.
     this.tag      = entry.nodeName.toLowerCase();
     this.elem     = entry;
-    // TODO: Convert this into canonical path
-    this.url      = entry.getAttribute('data-cache-url') || '';
+    this.url      = canonicalizePath(entry.getAttribute('data-cache-url'));
     this.version  = entry.getAttribute('data-cache-version') || config['version'];
+    this.type     = isBinary(this.tag) ? 'binary' : 'text';
   } else {
-    this.tag      = entry.tag;
+    this.tag      = entry.tag || '';
     this.elem     = null;
-    this.url      = entry.url;
+    this.url      = canonicalizePath(entry.url);
     this.version  = entry.version || config['version'];
+    this.type     = entry.type || 'text'; // (binary|json|text)
   }
 
   if (this.version === '') {
@@ -284,17 +310,17 @@ CacheEntry.prototype = {
           __debug && console.log('[%s] cache found. loading.', this.url);
           callback();
         }
-      }).bind(this), (function onReadCacheError() {
-        __debug && console.log('[%s] reading cache failed. falling back.', this.url);
+      }).bind(this), (function onReadCacheError(message) {
+        __debug && console.log('[%s] reading cache failed. %s falling back.', this.url, message);
         callback();
       }).bind(this));
     }
   },
   readCache: function(callback, errorCallback) {
-    if (!storage) {
-      callback(null);
-    } else {
+    if (storage) {
       storage.get(this, callback, errorCallback);
+    } else if (typeof errorCallback == 'function') {
+      errorCallback('storage not ready');
     }
   },
   createCache: function(cacheExists, callback, errorCallback) {
@@ -303,58 +329,59 @@ CacheEntry.prototype = {
 
     // It's possible storage failed on initialization and fallbacking.
     if (!storage) {
-      callback();
-    // At this point, this.content is either a text or an arraybuffer.
+      if (typeof errorCallback == 'function')
+        errorCallback('storage not ready');
+      return;
+    }
+
+    // At this point, this.content is either a text or a blob.
     // If received content is Blob and storage is not FileSystem, convert it to DataURL
-    } else if (storage instanceof fs) {
+    if (storage instanceof fs) {
       // TODO: store as Blob if Firefox
       __debug && console.log('[%s] creating Blob cache in FileSystem.', this.url);
       storage.set(this, callback, errorCallback);
-    } else if (Blob && this.content instanceof Blob) {
-      // Convert content to DataURL
-      __debug && console.log('[%s] converting Blob to DataURL using FileReader.', this.url);
-      var reader = new FileReader();
-      reader.onload = (function onReaderLoad(event) {
-        __debug && console.log('[%s] creating DataURL cache.', this.url);
-        this.content = event.target.result;
-        storage[method](this, callback, errorCallback);
-      }).bind(this);
-      reader.readAsDataURL(this.content);
-    } else if (this.content instanceof Array) {
-      // For IE 9, convert VBArray generated array into DataURL
-      __debug && console.log('[%s] converting Blob to DataURL with manipulation.', this.url);
-      this.content = 'data:'+this.mimetype+';base64,'+base64encode(this.content);
-      __debug && console.log('[%s] creating DataURL cache.', this.url);
-      storage[method](this, callback, errorCallback);
     } else {
-      __debug && console.log('[%s] creating text cache.', this.url);
-      storage[method](this, callback, errorCallback);
+      this.getContentAs('text', (function onGetContent(content) {
+        this.content = content;
+        __debug && console.log('[%s] creating DataURL cache.', this.url);
+        storage[method](this, callback, errorCallback);
+      }).bind(this));
     }
   },
-  removeCache: function() {
+  removeCache: function(callback, errorCallback) {
     if (storage) {
-      storage.remove(this.url);
+      storage.remove(this);
+    } else if (typeof errorCallback == 'function') {
+      errorCallback('storage not ready.');
     }
   },
   fetch: function(callback, errorCallback) {
     var xhr = new XMLHttpRequest();
-    var binaryReady = (typeof xhr.responseType == 'string');
+    var supportsType = (typeof xhr.responseType == 'string');
     xhr.open('GET', this.url, true);
-    if (binaryReady && isBinary(this.tag)) {
-      xhr.responseType = 'blob';
-      // If setting 'blob' is rejected, use 'arraybuffer' instead (for Android Browser)
-      xhr.responseType = xhr.responseType !== 'blob' ? 'arraybuffer' : 'blob';
-    } else if (xhr.overrideMimeType) {
-      // Hack if binary is not supported (but non IE)
-      xhr.overrideMimeType('text/plain; charset=x-user-defined');
+    if (this.type == 'binary') {
+      if (supportsType) {
+        xhr.responseType = 'blob';
+        // If setting 'blob' is rejected, use 'arraybuffer' instead (for Android Browser)
+        xhr.responseType = xhr.responseType !== 'blob' ? 'arraybuffer' : 'blob';
+      } else if (xhr.overrideMimeType) {
+        // Hack if binary is not supported (but non IE)
+        xhr.overrideMimeType('text/plain; charset=x-user-defined');
+      } else {
+        errorCallback('binary not supported on this browser.');
+      }
+    } else if (this.type == 'json') {
+      xhr.responseType = 'json';
+      // If setting 'json' is rejected, use 'text' instead
+      xhr.responseType = xhr.responseType != 'json' ? 'text' : 'json';
     }
     xhr.onreadystatechange = (function onReadyStateChange() {
       if (xhr.readyState === 4) {
         var data = {};
         if (xhr.status === 200 || xhr.status === 304) {
           data.mimetype = xhr.getResponseHeader('Content-Type').replace(/^(.*?);.*$/g, '$1');
-          if (isBinary(this.tag)) {
-            if (binaryReady) {
+          if (this.type == 'binary') {
+            if (supportsType) {
               if (xhr.responseType == 'blob') {
                 // Modern browsers
                 data.content = xhr.response;
@@ -378,6 +405,16 @@ CacheEntry.prototype = {
               }
               data.content = 'data:'+data.mimetype+';base64,'+base64encode(array);
               __debug && console.log('[%s] fetched binary using text manipulation.', this.url);
+            }
+          } else if (this.type == 'json') {
+            if (supportsType) {
+              data.content = xhr.response;
+            } else {
+              try {
+                data.content = JSON.parse(xhr.responseText);
+              } catch (e) {
+                errorCallback('Unparsable JSON response');
+              }
             }
           } else {
             data.content = xhr.responseText;
@@ -457,6 +494,70 @@ CacheEntry.prototype = {
       default:
         break;
     }
+  },
+  getContentAs: function(type, callback, errorCallback) {
+    errorCallback = typeof errorCallback != 'function' ? function(){} : errorCallback;
+    var reader = Blob ? new FileReader() : null;
+
+    if (this.content == '') {
+      __debug && console.error('[%s] content not loaded.', this.url);
+      errorCallback('content not loaded.');
+    }
+
+    // type accepts (arraybuffer|blob|text)
+    switch (type) {
+      case 'text':
+        if (reader && this.content instanceof Blob) {
+          // Convert content to DataURL
+          __debug && console.log('[%s] converting Blob to DataURL using FileReader.', this.url);
+          reader.onload = (function onReaderLoad(event) {
+            callback(event.target.result);
+          }).bind(this);
+          reader.readAsDataURL(this.content);
+        } else if (this.content instanceof Array) {
+          // For IE 9, convert VBArray generated array into DataURL
+          __debug && console.log('[%s] converting Blob to DataURL with manipulation.', this.url);
+          callback('data:'+this.mimetype+';base64,'+base64encode(this.content));
+        } else if (typeof this.content == 'string') {
+          callback(this.content);
+        }
+        break;
+      case 'arraybuffer':
+        if (reader && this.content instanceof Blob) {
+          // Convert content to DataURL
+          __debug && console.log('[%s] converting Blob to ArrayBuffer using FileReader.', this.url);
+          reader.onload = (function onReaderLoad(event) {
+            callback(event.target.result);
+          }).bind(this);
+          reader.readAsArrayBuffer(this.content);
+        } else if (atob && typeof this.content == 'string' && this.content.indexOf('data:') === 0) {
+          // Generate TypedArray from DataURL
+          var ab = new Uint8Array(atob(this.content.split(',')[1]).split('').map(function(c) {
+            return c.charCodeAt(0);
+          }));
+          callback(ab.buffer);
+        } else {
+          __debug && console.error('[%s] ArrayBuffer not supported on this browser.', this.url);
+          errorCallback('ArrayBuffer not supported on this browser.');
+        }
+        break;
+      case 'blob':
+        if (this.content instanceof Blob) {
+          callback(this.content);
+        } else if (reader && ArrayBuffer && atob &&
+          typeof this.content == 'string' && this.content.indexOf('data:') === 0) {
+          // Generate TypedArray from DataURL
+          var ab = new Uint8Array(atob(this.content.split(',')[1]).split('').map(function(c) {
+            return c.charCodeAt(0);
+          }));
+          // Generate Blob
+          callback(createBlob(ab.buffer, this.mimetype));
+        } else {
+          __debug && console.error('[%s] Blob not supported on this browser.', this.url);
+          errorCallback('Blob not supported on this browser.');
+        }
+        break;
+    }
   }
 };
 
@@ -496,7 +597,7 @@ var CacheManager = function() {
   config['prev-version'] = Cookies.getItem('pcache_version');
 
   // Debug mode
-  __debug = __debug === undefined &&
+  __debug = typeof __debug === 'undefined' &&
             config['debug-mode'] !== 'no' &&
             window.console ? true : false;
 
@@ -559,6 +660,14 @@ CacheManager.prototype = {
     document.body.style.display = 'none';
     this.queryElements(['link', 'script'], (function onStyleLoaded() {
       document.body.style.display = 'block';
+      var ready;
+      if (document.createEvent) {
+        ready = document.createEvent('HTMLEvents');
+        ready.initEvent('pcache-ready', true, false);
+      } else {
+        ready = new Event('pcache-ready', {bubbles: true, cancelable: false});
+      }
+      document.dispatchEvent(ready);
       this.queryElements(['img', 'audio', 'video'], (function onMediaLoaded() {
         // Set lazyload images
         if (this.lazyload.length > 0) {
@@ -566,7 +675,7 @@ CacheManager.prototype = {
         }
       }).bind(this));
     }).bind(this));
-    Cookies.setItem('pcache_version', config['version']);
+    Cookies.setItem('pcache_version', config['version'], null, config['root-path']);
   },
   queryElements: function(queryStrings, callback) {
     // TODO: Consider further optimization
@@ -705,7 +814,11 @@ fs.prototype = {
     });
   },
   get: function(_data, callback, errorCallback) {
-    this.ls.get(_data, callback, errorCallback);
+    if (!this.ls) {
+      errorCallback('storage not ready.');
+    } else {
+      this.ls.get(_data, callback, errorCallback);
+    }
   },
   remove: function(_data, callback, errorCallback) {
     var ls = this.ls;
@@ -825,11 +938,7 @@ var sql = function(callback, errorCallback) {
   this.db = openDatabase(STORAGE_NAME, '', 'cache', 1024 * 1024);
   if (this.db.version !== this.version) {
     this.db.changeVersion(this.db.version, this.version, function onChangeVersion(t) {
-      t.executeSql('CREATE TABLE cache ('+
-        'url         TEXT PRIMARY KEY, '+
-        'content     TEXT, '+
-        'mimetype    TEXT, '+
-        'version     TEXT)');
+      t.executeSql('CREATE TABLE cache (url TEXT PRIMARY KEY, content TEXT, mimetype TEXT, version TEXT)');
       callback();
     }, function onChangeVersionError() {
       if (typeof errorCallback == 'function')
