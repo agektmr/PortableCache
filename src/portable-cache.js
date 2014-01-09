@@ -1,7 +1,7 @@
 var config = {
   'version':            '',
   'responsive-image':   'no',
-  'root-path':          '',
+  'root-path':          '/',
   'preferred-storage':  'auto',
   'debug-mode':         'no'
 };
@@ -58,6 +58,34 @@ var URL               = window.URL ||
                         window.oURL ||
                         undefined;
 
+var addEventListenerFn = (window.document.addEventListener ?
+    function(element, type, fn) { element.addEventListener(type, fn); } :
+    function(element, type, fn) { element.attachEvent('on'+type, fn); });
+
+var removeEventListenerFn = (window.document.removeEventListener ?
+    function(element, type, fn) { element.removeEventListener(type, fn); } :
+    function(element, type, fn) { element.detachEvent('on'+type, fn); });
+
+// Refer: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/bind
+if (!Function.prototype.bind) {
+  Function.prototype.bind = function(oThis) {
+    if (typeof this !== 'function') {
+      throw new TypeError('Function.prototype.bind - what is trying to be bound is not callable');
+    }
+
+    var aArgs = Array.prototype.slice.call(arguments, 1),
+        fToBind = this,
+        fNOP = function() {},
+        fBound = function() {
+          return fToBind.apply(this instanceof fNOP && oThis ? this : oThis,
+            aArgs.concat(Array.prototype.slice.call(arguments)));
+        };
+    fNOP.prototype = this.prototype;
+    fBound.prototype = new fNOP();
+    return fBound;
+  };
+}
+
 var base64encode = function(s) {
   var base64list = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
   var t = '', p = -6, a = 0, i = 0, v = 0, c;
@@ -78,15 +106,6 @@ var base64encode = function(s) {
     v -= 6;
   }
   return t;
-};
-
-/**
- * Returns true if given string indicates binary type
- * @param  String  type   HTML tag name
- * @return Boolean        true if binary, false if not
- */
-var isBinary = function(tag) {
-  return (/^(img|audio|video)/).test(tag);
 };
 
 /**
@@ -161,33 +180,24 @@ var canonicalizePath = function(path) {
   return '/'+path_.join('/');
 };
 
-var addEventListenerFn = (window.document.addEventListener ?
-    function(element, type, fn) { element.addEventListener(type, fn); } :
-    function(element, type, fn) { element.attachEvent('on'+type, fn); });
 
-var removeEventListenerFn = (window.document.removeEventListener ?
-    function(element, type, fn) { element.removeEventListener(type, fn); } :
-    function(element, type, fn) { element.detachEvent('on'+type, fn); });
-
-// Refer: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/bind
-if (!Function.prototype.bind) {
-  Function.prototype.bind = function(oThis) {
-    if (typeof this !== 'function') {
-      throw new TypeError('Function.prototype.bind - what is trying to be bound is not callable');
+var loadLazyImages = function(cacheList) {
+  var scrollY = window.pageYOffset || document.documentElement.scrollTop;
+  var pageHeight = window.innerHeight || document.documentElement.clientHeight;
+  var min = scrollY - (pageHeight/4);
+  var max = scrollY + ~~(pageHeight*1.25);
+  for (var i = 0; i < cacheList.length; i++) {
+    var cache = cacheList[i];
+    var elemY = cache.elem.offsetTop;
+    var elemHeight = cache.elem.offsetHeight;
+    if (elemY+elemHeight <= min || elemY <= max) {
+      cache.load(function onCacheLoaded(cache) {
+        cache.constructDOM();
+      });
+      cacheList.splice(i--, 1);
     }
-
-    var aArgs = Array.prototype.slice.call(arguments, 1),
-        fToBind = this,
-        fNOP = function() {},
-        fBound = function() {
-          return fToBind.apply(this instanceof fNOP && oThis ? this : oThis,
-            aArgs.concat(Array.prototype.slice.call(arguments)));
-        };
-    fNOP.prototype = this.prototype;
-    fBound.prototype = new fNOP();
-    return fBound;
-  };
-}
+  }
+};
 
 // Refer: https://developer.mozilla.org/ja/docs/DOM/document.cookie
 var Cookies = {
@@ -237,15 +247,15 @@ var CacheEntry = function(entry) {
   this.mimetype   = '';
   this.lazyload   = false;
 
-  // Check if this is an HTMLElement instance
   if (entry.nodeName) {
-    // If entry is an HTMLElement, all properties will be derived from the element.
+    // If entry is an HTMLElement, all properties will be picked from the element.
     this.tag      = entry.nodeName.toLowerCase();
     this.elem     = entry;
     this.url      = canonicalizePath(entry.getAttribute('data-cache-url'));
     this.version  = entry.getAttribute('data-cache-version') || config['version'];
-    this.type     = isBinary(this.tag) ? 'binary' : 'text';
+    this.type     = (/^(img|audio|video)/).test(this.tag) ? 'binary' : 'text';
   } else {
+    // If entry is an object
     this.tag      = entry.tag || '';
     this.elem     = null;
     this.url      = canonicalizePath(entry.url);
@@ -268,15 +278,17 @@ var CacheEntry = function(entry) {
 };
 CacheEntry.prototype = {
   load: function(callback) {
+    callback = typeof callback != 'function' ? function(){} : callback;
+
     var errorCallback = function(errorMessage) {
       __debug && console.log('[%s] %s falling back.', this.url, errorMessage);
-      callback();
+      callback(this);
     };
 
     // If non-supported browser, or only lazyload is requested, fallback
     if (config['version'] == NOT_SUPPORTED || this.url === '') {
       __debug && console.log('[%s] fallback without checking cache.', this.url);
-      callback();
+      callback(this);
     // If previous version doesn't exist, fetch and construct;
     } else if (config['prev-version'] === null) {
       __debug && console.log('[%s] no version found. fetching.', this.url);
@@ -308,11 +320,11 @@ CacheEntry.prototype = {
           this.content  = data.content || '';
           this.mimetype = data.mimetype;
           __debug && console.log('[%s] cache found. loading.', this.url);
-          callback();
+          callback(this);
         }
       }).bind(this), (function onReadCacheError(message) {
         __debug && console.log('[%s] reading cache failed. %s falling back.', this.url, message);
-        callback();
+        callback(this);
       }).bind(this));
     }
   },
@@ -656,10 +668,11 @@ CacheManager.prototype = {
       }
     }).bind(this);
 
-    // Prevent flashing
+    // Prevent flash
     document.body.style.display = 'none';
     this.queryElements(['link', 'script'], (function onStyleLoaded() {
       document.body.style.display = 'block';
+
       var ready;
       if (document.createEvent) {
         ready = document.createEvent('HTMLEvents');
@@ -668,6 +681,7 @@ CacheManager.prototype = {
         ready = new Event('pcache-ready', {bubbles: true, cancelable: false});
       }
       document.dispatchEvent(ready);
+
       this.queryElements(['img', 'audio', 'video'], (function onMediaLoaded() {
         // Set lazyload images
         if (this.lazyload.length > 0) {
@@ -677,55 +691,35 @@ CacheManager.prototype = {
     }).bind(this));
     Cookies.setItem('pcache_version', config['version'], null, config['root-path']);
   },
-  queryElements: function(queryStrings, callback) {
-    // TODO: Consider further optimization
-    var elems = [], i;
-    // TODO: Add support for lazyload without cache request
-    for (i = 0; i < queryStrings.length; i++) {
-      var tags = document.getElementsByTagName(queryStrings[i]);
-      for (var j = 0; j < tags.length; j++) {
-        if (tags[j].getAttribute('data-cache-url') !== null) {
-          elems.push(tags[j]);
+  queryElements: function(queries, callback) {
+    var total = 0, count = 0;
+
+    while (queries.length) {
+      var query = queries.shift(),
+          tags  = document.getElementsByTagName(query);
+
+      for (var i = 0; i < tags.length; i++) {
+        if (tags[i].getAttribute('data-cache-url') !== null) {
+          total++;
+          var cache = new CacheEntry(tags[i]);
+          this.entries.push(cache);
+          if (cache.lazyload) {
+            total--;
+            this.lazyload.push(cache);
+          } else {
+            cache.load(function onCacheLoaded(cache) {
+              cache.constructDOM(function onConstructDOM() {
+                count++;
+                if (i === tags.length && total === count && queries.length === 0) {
+                  if (typeof callback == 'function') callback();
+                }
+              });
+            });
+          }
         }
       }
     }
-
-    // loop through elements
-    var count = 0, length = elems.length;
-    for (i = 0; i < elems.length; i++) {
-      var cache = new CacheEntry(elems[i]);
-      this.entries.push(cache);
-      if (cache.lazyload) {
-        this.lazyload.push(cache);
-        length--;
-      } else {
-        cache.load((function onCacheLoaded(cache) {
-          cache.constructDOM(function() {
-            count++;
-            if (typeof callback == 'function' && count == length) callback();
-          });
-        }).bind(this, cache));
-      }
-    }
-    // If all elements are lazy loaded, here's callback trigger.
-    if (typeof callback == 'function' && length === 0) callback();
-  },
-  loadLazyImages: function() {
-    var scrollY = window.pageYOffset || document.documentElement.scrollTop;
-    var pageHeight = window.innerHeight || document.documentElement.clientHeight;
-    var min = scrollY - (pageHeight/4);
-    var max = scrollY + ~~(pageHeight*1.25);
-    for (var i = 0; i < this.lazyload.length; i++) {
-      var cache = this.lazyload[i];
-      var elemY = cache.elem.offsetTop;
-      var elemHeight = cache.elem.offsetHeight;
-      if (elemY+elemHeight <= min || elemY <= max) {
-        cache.load((function onCacheLoaded(cache) {
-          cache.constructDOM();
-        }).bind(this, cache));
-        this.lazyload.splice(i--, 1);
-      }
-    }
+    if (total === 0 && typeof callback == 'function') callback();
   },
   getEntryByUrl: function(url) {
     for (var i = 0; i < this.entries.length; i++) {
@@ -791,7 +785,9 @@ fs.prototype = {
               mimetype: _data.mimetype,
               version:  _data.version
             };
-            ls.set(data, callback, errorCallback);
+            ls.set(data, function() {
+              callback(_data);
+            }, errorCallback);
           };
 
           writer.onerror = function onFileWriteError(e) {
@@ -887,7 +883,7 @@ idb.prototype = {
     };
     var req = this.db.transaction(['cache'], 'readwrite').objectStore('cache').put(data);
     req.onsuccess = function(e) {
-      if (typeof callback == 'function') callback();
+      if (typeof callback == 'function') callback(_data);
     };
     req.onerror = function() {
       if (typeof errorCallback == 'function')
@@ -959,7 +955,7 @@ sql.prototype = {
       t.executeSql('INSERT INTO cache (url, content, mimetype, version) VALUES(?, ?, ?, ?)',
       [ _data.url, _data.content, _data.mimetype, _data.version ],
       function onExecuteSql(t, results) {
-        if (typeof callback == 'function') callback();
+        if (typeof callback == 'function') callback(_data);
       },
       function onExecuteSqlError(t, e) {
         if (typeof errorCallback == 'function')
@@ -972,7 +968,7 @@ sql.prototype = {
       t.executeSql('UPDATE cache SET mimetype=?, content=?, version=? WHERE url=?',
       [ _data.mimetype, _data.content, _data.version, _data.url ],
       function onExecuteSql(t, results) {
-        if (typeof callback == 'function') callback();
+        if (typeof callback == 'function') callback(_data);
       },
       function onExecuteSqlError(t, e) {
         if (typeof errorCallback == 'function')
@@ -1045,7 +1041,7 @@ ls.prototype = {
     setTimeout(function localStorageSet() {
       try {
         localStorage.setItem(_data.url, JSON.stringify(data));
-        if (typeof callback == 'function') callback();
+        if (typeof callback == 'function') callback(_data);
       } catch (e) {
         if (typeof errorCallback == 'function')
           errorCallback(e.message);
