@@ -772,26 +772,26 @@ var fs = function(callback, errorCallback) {
   });
 };
 fs.prototype = {
-  set: function(_data, callback, errorCallback) {
+  set: function(cache, callback, errorCallback) {
     var ls = this.ls;
     errorCallback = typeof errorCallback != 'function' ? function(){} : errorCallback;
   
-    var fileName = _data.url.replace(/\/|\./g, '_');
+    var fileName = cache.url.replace(/\/|\\/g, '_');
     this.fs.root.getDirectory(STORAGE_NAME, {create: true, exclusive: false},
     function onGetDirectory(directoryEntry) {
       directoryEntry.getFile(fileName, {create: true, exclusive: false},
       function onGetFile(fileEntry) {
         fileEntry.createWriter(function onCreateWriter(writer) {
           writer.onwriteend = function onWriteEnd() {
-            _data.src = fileEntry.toURL();
+            cache.src = fileEntry.toURL();
             var data = {
-              url:      _data.url,
-              src:      _data.src,
-              mimetype: _data.mimetype,
-              version:  _data.version
+              url:      cache.url,
+              src:      cache.src,
+              mimetype: cache.mimetype,
+              version:  cache.version
             };
             ls.set(data, function() {
-              callback(_data);
+              callback(cache);
             }, errorCallback);
           };
 
@@ -799,10 +799,10 @@ fs.prototype = {
             errorCallback('error writing FileSystem: '+e);
           };
 
-          if (typeof _data.content == 'string') {
-            writer.write(createBlob(_data.content, _data.mimetype));
+          if (typeof cache.content == 'string') {
+            writer.write(createBlob(cache.content, cache.mimetype));
           } else {
-            writer.write(_data.content);
+            writer.write(cache.content);
           }
         });
       },
@@ -814,24 +814,52 @@ fs.prototype = {
       errorCallback('failed getting directory: '+e);
     });
   },
-  get: function(_data, callback, errorCallback) {
+  get: function(cache, callback, errorCallback) {
     if (!this.ls) {
       errorCallback('storage not ready.');
     } else {
-      this.ls.get(_data, callback, errorCallback);
+      this.ls.get(cache, function(data) {
+        if (cache.elem == null) {
+          // Load blob if imperatively invoked
+          var fileName = cache.url.replace(/\/|\./g, '_');
+          this.fs.root.getDirectory(STORAGE_NAME, {create: false, exclusive: false},
+          function onGetDirectory(directoryEntry) {
+            directoryEntry.getFile(fileName, {create: false, exclusive: false},
+            function onGetFile(fileEntry) {
+              // TODO: Check
+              fileEntry.file(
+              function onFile(file) {
+                data.content = file;
+                callback(data);
+              },
+              function(e) {
+                errorCallback('failed getting content: '+e);
+              });
+            },
+            function onGetFileError(e) {
+              errorCallback('failed getting content: '+e);
+            });
+          },
+          function onGetDirectoryError(e) {
+            errorCallback('failed getting directory: '+e);
+          });
+        } else {
+          callback(data);
+        }
+      }, errorCallback);
     }
   },
-  remove: function(_data, callback, errorCallback) {
+  remove: function(cache, callback, errorCallback) {
     var ls = this.ls;
     errorCallback = typeof errorCallback != 'function' ? function(){} : errorCallback;
   
-    var fileName = _data.url.replace(/\/|\./g, '_');
+    var fileName = cache.url.replace(/\/|\./g, '_');
     this.fs.root.getDirectory(STORAGE_NAME, {create: true, exclusive: false},
     function onGetDirectory(directoryEntry) {
       directoryEntry.getFile(fileName, {create: true, exclusive: false},
       function onGetFile(fileEntry) {
         fileEntry.remove(function onRemove() {
-          ls.remove(_data, callback, errorCallback);
+          ls.remove(cache, callback, errorCallback);
         }, function onRemoveError(e) {
           errorCallback('failed removing file: '+e);
         });
@@ -878,27 +906,27 @@ var idb = function(callback, errorCallback) {
   }).bind(this);
 };
 idb.prototype = {
-  set: function(_data, callback, errorCallback) {
+  set: function(cache, callback, errorCallback) {
     // TODO: Store Blob if Firefox?
     var data = {
-      url:      _data.url,
-      content:  _data.content,
-      mimetype: _data.mimetype,
-      version:  _data.version
+      url:      cache.url,
+      content:  cache.content,
+      mimetype: cache.mimetype,
+      version:  cache.version
     };
     var req = this.db.transaction(['cache'], 'readwrite').objectStore('cache').put(data);
     req.onsuccess = function(e) {
-      if (typeof callback == 'function') callback(_data);
+      if (typeof callback == 'function') callback(cache);
     };
     req.onerror = function() {
       if (typeof errorCallback == 'function')
         errorCallback('error writing IndexedDB: '+req.error.name);
     };
   },
-  get: function(_data, callback, errorCallback) {
+  get: function(cache, callback, errorCallback) {
     callback = typeof callback != 'function' ? function(){} : callback;
 
-    var req = this.db.transaction(['cache'], 'readonly').objectStore('cache').get(_data.url);
+    var req = this.db.transaction(['cache'], 'readonly').objectStore('cache').get(cache.url);
     req.onsuccess = function(e) {
       if (e.target.result) {
         var data = e.target.result;
@@ -912,8 +940,8 @@ idb.prototype = {
         errorCallback('error getting IndexedDB: '+req.error.name);
     };
   },
-  remove: function(_data, callback, errorCallback) {
-    var req = this.db.transaction(['cache'], 'readwrite').objectStore('cache').delete(_data.url);
+  remove: function(cache, callback, errorCallback) {
+    var req = this.db.transaction(['cache'], 'readwrite').objectStore('cache').delete(cache.url);
     req.onsuccess = function(e) {
       if (typeof callback == 'function') callback();
     };
@@ -955,12 +983,12 @@ var sql = function(callback, errorCallback) {
   }
 };
 sql.prototype = {
-  set: function(_data, callback, errorCallback) {
+  set: function(cache, callback, errorCallback) {
     this.db.transaction(function onTransaction(t) {
       t.executeSql('INSERT INTO cache (url, content, mimetype, version) VALUES(?, ?, ?, ?)',
-      [ _data.url, _data.content, _data.mimetype, _data.version ],
+      [ cache.url, cache.content, cache.mimetype, cache.version ],
       function onExecuteSql(t, results) {
-        if (typeof callback == 'function') callback(_data);
+        if (typeof callback == 'function') callback(cache);
       },
       function onExecuteSqlError(t, e) {
         if (typeof errorCallback == 'function')
@@ -968,12 +996,12 @@ sql.prototype = {
       });
     });
   },
-  update: function(_data, callback, errorCallback) {
+  update: function(cache, callback, errorCallback) {
     this.db.transaction(function onTransaction(t) {
       t.executeSql('UPDATE cache SET mimetype=?, content=?, version=? WHERE url=?',
-      [ _data.mimetype, _data.content, _data.version, _data.url ],
+      [ cache.mimetype, cache.content, cache.version, cache.url ],
       function onExecuteSql(t, results) {
-        if (typeof callback == 'function') callback(_data);
+        if (typeof callback == 'function') callback(cache);
       },
       function onExecuteSqlError(t, e) {
         if (typeof errorCallback == 'function')
@@ -981,18 +1009,18 @@ sql.prototype = {
       });
     });
   },
-  get: function(_data, callback, errorCallback) {
+  get: function(cache, callback, errorCallback) {
     callback = typeof callback != 'function' ? function(){} : callback;
     errorCallback = typeof errorCallback != 'function' ? function(){} : errorCallback;
 
     this.db.readTransaction(function onReadTransaction(t) {
-      t.executeSql('SELECT * FROM cache WHERE url=?', [ _data.url ],
+      t.executeSql('SELECT * FROM cache WHERE url=?', [ cache.url ],
       function onExecuteSql(t, results) {
         if (results.rows.length > 0) {
           var result = results.rows.item(0);
           // copy result since you can't change it as it is
           var data = {
-            url:      _data.url,
+            url:      cache.url,
             content:  result.content,
             mimetype: result.mimetype,
             version:  result.version
@@ -1009,11 +1037,11 @@ sql.prototype = {
       });
     });
   },
-  remove: function(_data, callback, errorCallback) {
+  remove: function(cache, callback, errorCallback) {
     this.db.transaction(function onTransaction(t) {
-      t.executeSql('DELETE FROM cache WHERE url=?', [_data.url],
+      t.executeSql('DELETE FROM cache WHERE url=?', [cache.url],
       function onExecuteSql(t, results) {
-        __debug && console.log('[%s] Cache removed from WebSQL.', _data.url);
+        __debug && console.log('[%s] Cache removed from WebSQL.', cache.url);
         if (typeof callback == 'function') callback();
       },
       function onExecuteSqlError(t, e) {
@@ -1036,27 +1064,27 @@ var ls = function(callback, errorCallback) {
   }, 0);
 };
 ls.prototype = {
-  set: function(_data, callback, errorCallback) {
+  set: function(cache, callback, errorCallback) {
     var data = {
-      src:      _data.src || '',
-      content:  _data.content || '',
-      mimetype: _data.mimetype,
-      version:  _data.version
+      src:      cache.src || '',
+      content:  cache.content || '',
+      mimetype: cache.mimetype,
+      version:  cache.version
     };
     setTimeout(function localStorageSet() {
       try {
-        localStorage.setItem(_data.url, JSON.stringify(data));
-        if (typeof callback == 'function') callback(_data);
+        localStorage.setItem(cache.url, JSON.stringify(data));
+        if (typeof callback == 'function') callback(cache);
       } catch (e) {
         if (typeof errorCallback == 'function')
           errorCallback(e.message);
       }
     }, 0);
   },
-  get: function(_data, callback, errorCallback) {
+  get: function(cache, callback, errorCallback) {
     setTimeout(function localStorageGet() {
       try {
-        var data = localStorage.getItem(_data.url) || null;
+        var data = localStorage.getItem(cache.url) || null;
         if (data) {
           data = JSON.parse(data);
         }
@@ -1067,10 +1095,10 @@ ls.prototype = {
       }
     }, 0);
   },
-  remove: function(_data, callback, errorCallback) {
+  remove: function(cache, callback, errorCallback) {
     setTimeout(function localStorageRemove() {
       try {
-        localStorage.removeItem(_data.url);
+        localStorage.removeItem(cache.url);
         if (typeof callback == 'function') callback();
       } catch (e) {
         if (typeof errorCallback == 'function')
