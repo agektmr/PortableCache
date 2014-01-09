@@ -475,7 +475,10 @@ CacheEntry.prototype = {
           __debug && console.log('[%s] replaced src of <script>', this.url);
           callback();
         } else if (this.content) {
+          this.tag = 'script';
+          this.elem = document.createElement('script');
           this.elem.textContent = this.content;
+          document.head.appendChild(this.elem);
           __debug && console.log('[%s] inlined to <script>', this.url);
           callback();
           return;
@@ -661,7 +664,7 @@ CacheManager.prototype = {
   bootstrap: function() {
     var onLazyload = (function() {
       if (this.lazyload.length) {
-        this.loadLazyImages();
+        loadLazyImages(this.lazyload);
       } else {
         removeEventListenerFn(document, 'scroll', onLazyload);
         __debug && console.log('lazyload done. removed `scroll` event');
@@ -696,9 +699,10 @@ CacheManager.prototype = {
 
     while (queries.length) {
       var query = queries.shift(),
-          tags  = document.getElementsByTagName(query);
+          tags  = document.getElementsByTagName(query),
+          length = tags.length;
 
-      for (var i = 0; i < tags.length; i++) {
+      for (var i = 0; i < length; i++) {
         if (tags[i].getAttribute('data-cache-url') !== null) {
           total++;
           var cache = new CacheEntry(tags[i]);
@@ -708,9 +712,10 @@ CacheManager.prototype = {
             this.lazyload.push(cache);
           } else {
             cache.load(function onCacheLoaded(cache) {
+              // TODO: keep construction order when <script>
               cache.constructDOM(function onConstructDOM() {
                 count++;
-                if (i === tags.length && total === count && queries.length === 0) {
+                if (i === length && total === count && queries.length === 0) {
                   if (typeof callback == 'function') callback();
                 }
               });

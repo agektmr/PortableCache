@@ -5,7 +5,15 @@ Cache assets, reduce downloads, load faster.
 
 ## What is PortableCache.js?
 
-PortableCache.js is a resource loader with mobile browsers in mind.
+AppCache is a fast offline enabler. But there are a few glitches that keeps 
+people from using it. You might have wished:
+
+* Permanently cache heavy resources without caching root HTML.
+* Show the latest assets when update is available. (AppCache needs page reload).
+* Per content version management.
+
+PortableCache.js is a resource loader for mobile browsers to solve those 
+problems.
 
 * Declarative APIs.
 * Uses the best available storage on user's browser:
@@ -14,12 +22,17 @@ PortableCache.js is a resource loader with mobile browsers in mind.
     * WebSQL
     * LocalStorage
 * Falls back gracefully when storage is not available.
-* Supports lazyload image.
+* lazyload images.
 * Supports responsive images (NOT IMPLEMENTED YET).
 
 ## Demo
+### [PortableCache Example](http://demo.agektmr.com/portable-cache/)
 
-[http://demo.agektmr.com/PortableCache/example/](http://demo.agektmr.com/PortableCache/example/)
+Simplest declarative usage with lazyload images.
+
+### [Web Audio Drumpad](http://demo.agektmr.com/drumpad/)
+
+Imperative resource caching with deferred AngularJS bootstrap.
 
 ## Quick Start
 
@@ -28,7 +41,7 @@ You can quickly try out this library by following 3 steps.
 1. Insert following `meta` tag to your existing project's `head` tag.<br/>
    `<meta name="portable-cache" content="version=20131228">`
 1. Insert `script` tag to load `portable-cache.min.js` (Make sure it is below 
-   `meta[name=""portable-cache]`).<br/>
+   `meta[name="portable-cache"]`).<br/>
    `<script 
    src="https://raw.github.com/agektmr/PortableCache.js/0.6.0/dist/portable-cache.min.js">`
 1. Replace attribute name of resources you'd like to cache to 
@@ -116,11 +129,9 @@ adding `lazyload` attribute.
 
     <img data-cache-url="img/image.jpg" lazyload>
 
-### Responsive images
+### Responsive images (NOT IMPLEMENTED)
 
-You can load responsive image by using `srcset` semantics to 
-`img[data-cache-url]`.  
-NOT IMPLEMENTED YET.
+You can load responsive image by using `srcset` semantics. Details TBD.
 
 ## Imperative APIs
 
