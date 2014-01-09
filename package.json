@@ -1,5 +1,5 @@
 {
-  "name": "PortableCache.js",
+  "name": "portable-cache.js",
   "version": "0.6.0",
   "description": "Cache assets, reduce downloads, load faster.",
   "main": "dist/portable-cache.min.js",

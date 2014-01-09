@@ -66,8 +66,8 @@ attribute accepts comma separated parameters as listed below.
 <tr>
 <td>root-path</td>
 <td>string</td>
-<td>''</td>
-<td>Optional. Cache version usually is tied to the URL path you are on. Give it a root path when you want the cache to be accessible from multiple locations.</td>
+<td>'/'</td>
+<td>Optional. Cache version usually is tied to the URL path you are on. Specify a root path when you want the cache to be restricted to the directory.</td>
 </tr>
 <tr>
 <td>responsive-image</td>
@@ -121,43 +121,6 @@ adding `lazyload` attribute.
 You can load responsive image by using `srcset` semantics to 
 `img[data-cache-url]`.  
 NOT IMPLEMENTED YET.
-
-## Example
-
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>PortableCache Example</title>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-        <meta name="portable-cache" content="version=20130630">
-        <link rel="stylesheet" data-cache-url="css/bootstrap.css">
-        <script src="js/PortableCache.js"></script>
-      </head>
-      <body>
-        <div class="navbar">
-          <div class="navbar-inner">
-            <div class="container">
-              <span class="brand">PortableCache.js</span>
-            </div>
-          </div>
-        </div>
-
-    ...........snip..............
-
-            <h2>Current Status</h2>
-            <p>Under development. Very early stage.</p>
-            <h2>Example Image Stabs</h2>
-            <img data-cache-url="img/abstract1_640x428.jpg" alt="" lazyload>
-            <img data-cache-url="img/abstract2_640x441.jpg" alt="" lazyload>
-            <img data-cache-url="img/abstract3_640x541.jpg" alt="" lazyload>
-            <h2>Author</h2>
-            <ul>
-              <li>Eiji Kitamura (<a href="http://google.com/+agektmr" target="_blank">+agektmr</a>, <a href="http://twitter.com/agektmr" target="_blank">@agektmr</a>)</li>
-            </ul>
-          </div>
-        </div>
-      </body>
 
 ## Imperative APIs
 
@@ -233,10 +196,89 @@ TBD
 
 ##### getContentAs(type, callback, errorCallback)
 
-TBD  
-**Events**  
+TBD
+
+### Events
+
 PortableCache fires `pcache-ready` event after loading `link` and `script` 
 resources.
+
+## Examples
+### Simplest Declarative Example
+
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>PortableCache Example</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+        <meta name="portable-cache" content="version=20130630">
+        <link rel="stylesheet" data-cache-url="css/bootstrap.css">
+        <script src="js/portable-cache.js"></script>
+      </head>
+      <body>
+        <div class="navbar">
+          <div class="navbar-inner">
+            <div class="container">
+              <span class="brand">PortableCache.js</span>
+            </div>
+          </div>
+        </div>
+
+    ...........snip..............
+
+            <h2>Current Status</h2>
+            <p>Under development. Very early stage.</p>
+            <h2>Example Image Stabs</h2>
+            <img data-cache-url="img/abstract1_640x428.jpg" alt="" lazyload>
+            <img data-cache-url="img/abstract2_640x441.jpg" alt="" lazyload>
+            <img data-cache-url="img/abstract3_640x541.jpg" alt="" lazyload>
+            <h2>Author</h2>
+            <ul>
+              <li>Eiji Kitamura (<a href="http://google.com/+agektmr" target="_blank">+agektmr</a>, <a href="http://twitter.com/agektmr" target="_blank">@agektmr</a>)</li>
+            </ul>
+          </div>
+        </div>
+      </body>
+    </html>
+
+### AngularJS manual initialization
+#### HTML
+
+        <script data-cache-url="js/angular.js"></script>
+        <script data-cache-url="js/audio.js"></script>
+        <script data-cache-url="js/main.js"></script>
+        <script src="js/portable-cache.js"></script>
+
+#### JavaScript
+
+    var app = angular.module('App', []);
+    app.directive('aDirective', function($window) {
+      ...
+    });
+    // Invoke Angular manual initialization after pcache-ready event
+    document.addEventListener('pcache-ready', function() {
+      angular.bootstrap(document, ['App']);
+    });
+
+### Imperative cache resource handling
+
+    var map = [
+      '/sample/snare.wav',
+      '/sample/bass.wav',
+      '/sample/hihat.wav'
+    ];
+    var buffer = [];
+    for (var i = 0; i < map.length; i++) {
+      (function(i, url) {
+        var cache = new CacheEntry({url:url, type:'binary'});
+        cache.load(function(cache) {
+          cache.getContentAs('arraybuffer', function(b) {
+            buffer[i] = c.createBuffer(b, false);
+          });
+        });
+      })(i, map[i]);
+    }
 
 ## Server side optimization
 
@@ -257,17 +299,17 @@ Following browsers are supported by PortableCache.js.
 * Android Browser 4 (WebSQL)
 * Safari 7 (WebSQL)
 
+Following browsers are confirmed gracefully fallbacks on PortableCache.js
+
+* IE 6, 7, 8
+
 Needs test on following browsers
 
 * Android Browser 3 (WebSQL)
 * Safari 5 (WebSQL)
 * Safari 6 (WebSQL)
 
-Following browsers are confirmed gracefully fallbacks on PortableCache.js
-
-* IE 6, 7, 8
-
-Browsers not listed here are either yet to be tested.
+Browsers not listed here are yet to be tested.
 
 ## Author
 
