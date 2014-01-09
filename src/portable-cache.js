@@ -1,6 +1,6 @@
 var config = {
   'version':            '',
-  'responsive-image':   'no',
+  'auto-init':          'yes',
   'root-path':          '/',
   'preferred-storage':  'auto',
   'debug-mode':         'no'
@@ -253,6 +253,8 @@ var CacheEntry = function(entry) {
     this.elem     = entry;
     this.url      = canonicalizePath(entry.getAttribute('data-cache-url'));
     this.version  = entry.getAttribute('data-cache-version') || config['version'];
+    // async for script tag
+    this.async    = entry.getAttribute('async') === null ? false : true;
     this.type     = (/^(img|audio|video)/).test(this.tag) ? 'binary' : 'text';
   } else {
     // If entry is an object
@@ -436,7 +438,7 @@ CacheEntry.prototype = {
         } else if (xhr.status === 0) {
           // replace status code with cross domain if it is
           if (this.url.indexOf(window.location.origin) === -1) {
-            errorCallback('XMLHttpRequest was allowed because of Access-Control-Allow-Origin.');
+            errorCallback('XMLHttpRequest was not allowed because of Access-Control-Allow-Origin.');
           } else {
             errorCallback('XMLHttpRequest unknown error.');
           }
@@ -471,24 +473,28 @@ CacheEntry.prototype = {
         break;
       case 'script':
         if (this.src) {
+          this.elem.async = this.async;
           this.elem.setAttribute('src', this.src);
           __debug && console.log('[%s] replaced src of <script>', this.url);
-          callback();
+          addEventListenerFn(this.elem, 'load', callback);
         } else if (this.content) {
           this.tag = 'script';
           this.elem = document.createElement('script');
+          this.elem.async = this.async;
           this.elem.textContent = this.content;
           document.head.appendChild(this.elem);
           __debug && console.log('[%s] inlined to <script>', this.url);
           callback();
           return;
         } else {
+          this.elem.async = this.async;
           this.elem.setAttribute('src', this.url);
           __debug && console.log('[%s] fallback to <script>', this.url);
           addEventListenerFn(this.elem, 'load', callback);
         }
         break;
       case 'link':
+        // TODO: link tag isn't necessarily a stylesheet
         if (this.src) {
           this.elem.setAttribute('href', this.src);
           __debug && console.log('[%s] replaced href of <link>', this.url);
@@ -618,6 +624,8 @@ var CacheManager = function() {
 
   __debug && console.log('Configuration loaded:', config);
 
+  var bootstrap = config['auto-init'] != 'no' ? this.bootstrap.bind(this) : function(){};
+
   // Failing if any of these won't work
   if (config['prev-version'] == NOT_SUPPORTED ||
       document.querySelectorAll === undefined ||
@@ -625,37 +633,39 @@ var CacheManager = function() {
       document.head === undefined) {
     __debug && console.log('This browser is not supported.');
     config['version'] = NOT_SUPPORTED;
-    addEventListenerFn(document, 'load', this.bootstrap.bind(this));
+    addEventListenerFn(document, 'load', bootstrap);
 
   } else {
     var errorCallback = function(errorMessage) {
       __debug && console.log('%s Falling back.', errorMessage);
       storage = null;
-      if (document.readyState == 'complete' ||
-          document.readyState == 'interactive' ||
-          document.readyState == 'loaded') {
-        this.bootstrap();
-      } else {
-        addEventListenerFn(document, 'load', this.bootstrap.bind(this));
+      if (config['auto-init'] != 'no') {
+        if (document.readyState == 'complete' ||
+            document.readyState == 'interactive' ||
+            document.readyState == 'loaded') {
+          this.bootstrap();
+        } else {
+          addEventListenerFn(document, 'load', bootstrap);
+        }
       }
     };
 
     // Initialize best available storage
     var ps = config['preferred-storage'];
     storage = (ps=='filesystem'   || (requestFileSystem && ps=='auto')) ?
-              new fs(this.bootstrap.bind(this), errorCallback.bind(this)) :
+              new fs(bootstrap, errorCallback.bind(this)) :
               (ps=='idb'          || (indexedDB         && ps=='auto')) ?
-              new idb(this.bootstrap.bind(this), errorCallback.bind(this)) :
+              new idb(bootstrap, errorCallback.bind(this)) :
               (ps=='sql'          || (openDatabase      && ps=='auto')) ?
-              new sql(this.bootstrap.bind(this), errorCallback.bind(this)) :
+              new sql(bootstrap, errorCallback.bind(this)) :
               (ps=='localstorage' || (localStorage      && ps=='auto')) ?
-              new ls(this.bootstrap.bind(this), errorCallback.bind(this)) :
+              new ls(bootstrap, errorCallback.bind(this)) :
               undefined;
 
     if (!storage) {
       // No available storages found
       __debug && console.log('None of storages are available. Falling back.');
-      addEventListenerFn(document, 'load', this.bootstrap.bind(this));
+      addEventListenerFn(document, 'load', bootstrap);
     }
   }
 };
@@ -673,7 +683,7 @@ CacheManager.prototype = {
 
     // Prevent flash
     document.body.style.display = 'none';
-    this.queryElements(['link', 'script'], (function onStyleLoaded() {
+    this.queryTags(['link', 'script'], (function onStyleLoaded() {
       document.body.style.display = 'block';
 
       var ready;
@@ -685,7 +695,7 @@ CacheManager.prototype = {
       }
       document.dispatchEvent(ready);
 
-      this.queryElements(['img', 'audio', 'video'], (function onMediaLoaded() {
+      this.queryTags(['img', 'audio', 'video'], (function onMediaLoaded() {
         // Set lazyload images
         if (this.lazyload.length > 0) {
           addEventListenerFn(document, 'scroll', onLazyload);
@@ -694,37 +704,60 @@ CacheManager.prototype = {
     }).bind(this));
     Cookies.setItem('pcache_version', config['version'], null, config['root-path']);
   },
-  queryElements: function(queries, callback) {
-    var total = 0, count = 0;
+  resolveTag: function(query, callback) {
+    var tags  = document.getElementsByTagName(query),
+        length = tags.length,
+        total = 0, count = 0, index = 0,
+        ordered = [], queue = [];
 
-    while (queries.length) {
-      var query = queries.shift(),
-          tags  = document.getElementsByTagName(query),
-          length = tags.length;
+    var onDOMConstruction = function() {
+      count++;
+      if (total === count && typeof callback == 'function') {
+        callback();
+      }
+    };
 
-      for (var i = 0; i < length; i++) {
-        if (tags[i].getAttribute('data-cache-url') !== null) {
-          total++;
-          var cache = new CacheEntry(tags[i]);
-          this.entries.push(cache);
-          if (cache.lazyload) {
-            total--;
-            this.lazyload.push(cache);
-          } else {
-            cache.load(function onCacheLoaded(cache) {
-              // TODO: keep construction order when <script>
-              cache.constructDOM(function onConstructDOM() {
-                count++;
-                if (i === length && total === count && queries.length === 0) {
-                  if (typeof callback == 'function') callback();
-                }
-              });
-            });
+    for (var i = 0; i < length; i++) {
+      if (tags[i].getAttribute('data-cache-url') !== null) {
+        total++;
+        var cache = new CacheEntry(tags[i]);
+        this.entries.push(cache);
+        if (cache.lazyload) {
+          total--;
+          this.lazyload.push(cache);
+        } else {
+          if (cache.tag == 'script' && !cache.async) {
+            // remember order of script tags to be loaded
+            ordered.push(cache);
           }
+          cache.load(function onCacheLoaded(cache) {
+            if (cache.tag == 'script' && !cache.async) {
+              var order = ordered.indexOf(cache);
+              queue[order] = cache;
+              if (order === index) {
+                // continue as long as valid queue exists
+                while (queue[index]) {
+                  ordered[index++].constructDOM(onDOMConstruction);
+                }
+              }
+            } else {
+              cache.constructDOM(onDOMConstruction);
+            }
+          });
         }
       }
     }
+    // In case there were no cachable tags / all img were lazyload
     if (total === 0 && typeof callback == 'function') callback();
+  },
+  queryTags: function(queries, callback) {
+    var count = 0, length = queries.length;
+    while (queries.length) {
+      this.resolveTag(queries.shift(), function() {
+        if (++count == length && typeof callback == 'function')
+          callback();
+      });
+    }
   },
   getEntryByUrl: function(url) {
     for (var i = 0; i < this.entries.length; i++) {

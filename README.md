@@ -5,15 +5,16 @@ Cache assets, reduce downloads, load faster.
 
 ## What is PortableCache.js?
 
-AppCache is a fast offline enabler. But there are a few glitches that keeps 
+AppCache is an offline enabler that can also speed up your website by reducing 
+the number of requests to a server. But there are a few glitches that keeps 
 people from using it. You might have wished:
 
 * Permanently cache heavy resources without caching root HTML.
-* Show the latest assets when update is available. (AppCache needs page reload.)
-* Per content version management. (AppCache fetches all listed resources once 
-  updated.)
+* Update assets without reloading. (AppCache needs page reload.)
+* Per content versioning. (AppCache requires entire resources to be refreshed on 
+  update.)
 
-PortableCache.js is a resource loader for mobile browsers to solve those 
+PortableCache.js is a resource loader for mobile web developers to solve those 
 problems.
 
 * Declarative APIs.
@@ -22,7 +23,7 @@ problems.
     * IndexedDB
     * WebSQL
     * LocalStorage
-* Falls back gracefully when storage is not available.
+* Fallback gracefully when storage is not available.
 * lazyload images.
 * Supports responsive images (NOT IMPLEMENTED YET).
 
@@ -55,7 +56,7 @@ You can quickly try out this library by following 3 steps.
 Configuration is set by using `meta[name="portable-cache"]`. The `content` 
 attribute accepts comma separated parameters as listed below.
 
-    <meta name="portable-cache" content="version=20130627, preferred-storage=localstorage, debug-mode=yes, responsive-image=yes>
+    <meta name="portable-cache" content="version=20130627, preferred-storage=localstorage, root-path=/portable-cache, debug-mode=yes, auto-init=no>
 
 <!-- TODO: Fix formatting of cells -->
 <table>
@@ -84,11 +85,10 @@ attribute accepts comma separated parameters as listed below.
 <td>Optional. Cache version usually is tied to the URL path you are on. Specify a root path when you want the cache to be restricted to the directory.</td>
 </tr>
 <tr>
-<td>responsive-image</td>
+<td>auto-init</td>
 <td>(yes|no)</td>
-<td>'no'</td>
-<td>Optional. Indicates if images should load responsive images.
-THIS FEATURE NEEDS MORE WORK.</td>
+<td>'yes'</td>
+<td>Optional. You can manually bootstrap PortableCache by setting this 'no'.</td>
 </tr>
 <tr>
 <td>debug-mode</td>
@@ -108,6 +108,12 @@ to `data-cache-url`.
 
     <script data-cache-url="js/main.js"></script>
 
+You can use `async` attribute to indicate that the script can immediately 
+execute. Otherwise, scripts will be executed in order. `defer` attribute is not 
+supported (for natural reason).  
+
+    <script data-cache-url="js/main.js" async></script>
+
 #### link
 
     <link rel="stylesheet" data-cache-url="css/style.css">
@@ -116,19 +122,17 @@ to `data-cache-url`.
 
     <img data-cache-url="img/image.jpg">
 
+You can defer loading of images until user actually see them in viewport by 
+adding `lazyload` attribute.
+
+    <img data-cache-url="img/image.jpg" lazyload>
+
 ### Per element versioning
 
 You may want to retain version of certain cached elements. These versions will 
 override global version specified in `meta[name="portable-cache"]`.
 
     <img data-cache-url="img/image.jpg" data-cache-version="20131228">
-
-### Lazyload images
-
-You can defer loading of images until user actually see them in viewport by 
-adding `lazyload` attribute.
-
-    <img data-cache-url="img/image.jpg" lazyload>
 
 ### Responsive images (NOT IMPLEMENTED)
 
@@ -141,21 +145,17 @@ APIs.
 
 ### CacheEntry
 #### Properties
-##### id
-
-ID of this cache.
-
 ##### url
 
-URL of this resource that can replace src.
+URL of this resource that can replace `src` when fallback.
 
 ##### src
 
-Source URL to be replaced with (src|href)
+Resource URL to be replaced with `src` or `href`
 
 ##### tag
 
-HTML tag associated
+HTML tag associated with this CacheEntry
 
 ##### type
 
@@ -180,6 +180,10 @@ Original DOM Element.
 ##### lazyload
 
 Boolean value that indicates if lazyload is requested.
+
+##### async
+
+async for `script` tag
 
 #### Methods
 ##### load(callback)
