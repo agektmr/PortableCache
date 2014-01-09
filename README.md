@@ -9,8 +9,9 @@ AppCache is a fast offline enabler. But there are a few glitches that keeps
 people from using it. You might have wished:
 
 * Permanently cache heavy resources without caching root HTML.
-* Show the latest assets when update is available. (AppCache needs page reload).
-* Per content version management.
+* Show the latest assets when update is available. (AppCache needs page reload.)
+* Per content version management. (AppCache fetches all listed resources once 
+  updated.)
 
 PortableCache.js is a resource loader for mobile browsers to solve those 
 problems.
@@ -109,7 +110,7 @@ to `data-cache-url`.
 
 #### link
 
-    <link data-cache-url="css/style.css">
+    <link rel="stylesheet" data-cache-url="css/style.css">
 
 #### img
 
@@ -267,7 +268,7 @@ resources.
     app.directive('aDirective', function($window) {
       ...
     });
-    // Invoke Angular manual initialization after pcache-ready event
+    // Invoke Angular manual initialization after 'pcache-ready' event.
     document.addEventListener('pcache-ready', function() {
       angular.bootstrap(document, ['App']);
     });
@@ -293,10 +294,11 @@ resources.
 
 ## Server side optimization
 
-PortableCache sends a version string of stored in cache as `pcache_version` in 
-cookie. Notably, if the browser is already proved to be unsupported, it carries 
-a string `NOT_SUPPORTED` instead of a version string. Use this cookie so your 
-server can serve an HTML without PortableCache.js in mind to avoid overheads.
+PortableCache sends a version string stored in cache as `pcache_version` in 
+cookie. Notably, if the browser is already proved to be unsupported (fallback 
+without caching), it carries a string `NOT_SUPPORTED` instead of a version 
+string. Use this cookie so your server can serve an HTML without 
+PortableCache.js in mind to avoid overheads.
 
 ## Browser Support
 
@@ -310,11 +312,11 @@ Following browsers are supported by PortableCache.js.
 * Android Browser 4 (WebSQL)
 * Safari 7 (WebSQL)
 
-Following browsers are confirmed gracefully fallbacks on PortableCache.js
+Following browsers are confirmed to gracefully fallback on PortableCache.js
 
 * IE 6, 7, 8
 
-Needs test on following browsers
+Need tests on following browsers
 
 * Android Browser 3 (WebSQL)
 * Safari 5 (WebSQL)
