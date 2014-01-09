@@ -9,15 +9,6 @@
     <link rel="stylesheet" data-cache-url="lib/bootstrap/bootstrap.css">
     <link rel="stylesheet" data-cache-url="css/united.css">
     <script src="js/portable-cache.js"></script>
-    <script>
-      document.addEventListener('pcache-ready', function(e) {
-        if (window.performance) {
-          var loadingTime = window.performance.timing.loadEventStart - window.performance.timing.requestStart;
-          console.log('pcache-ready:', loadingTime / 1000, 'sec');
-          console.timeStamp && console.timeStamp('pcache-ready');
-        }
-      });
-    </script>
   </head>
   <body>
     <div class="navbar navbar-inverse">

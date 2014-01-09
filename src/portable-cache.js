@@ -251,7 +251,12 @@ var CacheEntry = function(entry) {
     // If entry is an HTMLElement, all properties will be picked from the element.
     this.tag      = entry.nodeName.toLowerCase();
     this.elem     = entry;
-    this.url      = canonicalizePath(entry.getAttribute('data-cache-url'));
+    var url = entry.getAttribute('data-cache-url');
+    if (config['version'] != NOT_SUPPORTED) {
+      this.url    = canonicalizePath(url);
+    } else {
+      this.url    = url;
+    }
     this.version  = entry.getAttribute('data-cache-version') || config['version'];
     // async for script tag
     this.async    = entry.getAttribute('async') === null ? false : true;
@@ -633,7 +638,7 @@ var CacheManager = function() {
       document.head === undefined) {
     __debug && console.log('This browser is not supported.');
     config['version'] = NOT_SUPPORTED;
-    addEventListenerFn(document, 'load', bootstrap);
+    addEventListenerFn(window, 'load', bootstrap);
 
   } else {
     var errorCallback = function(errorMessage) {
@@ -645,7 +650,7 @@ var CacheManager = function() {
             document.readyState == 'loaded') {
           this.bootstrap();
         } else {
-          addEventListenerFn(document, 'load', bootstrap);
+          addEventListenerFn(window, 'load', bootstrap);
         }
       }
     };
@@ -665,7 +670,7 @@ var CacheManager = function() {
     if (!storage) {
       // No available storages found
       __debug && console.log('None of storages are available. Falling back.');
-      addEventListenerFn(document, 'load', bootstrap);
+      addEventListenerFn(window, 'load', bootstrap);
     }
   }
 };
@@ -686,14 +691,22 @@ CacheManager.prototype = {
     this.queryTags(['link', 'script'], (function onStyleLoaded() {
       document.body.style.display = 'block';
 
-      var ready;
-      if (document.createEvent) {
-        ready = document.createEvent('HTMLEvents');
-        ready.initEvent('pcache-ready', true, false);
-      } else {
-        ready = new Event('pcache-ready', {bubbles: true, cancelable: false});
+      if (config['version'] != NOT_SUPPORTED) {
+        var ready;
+        if (document.createEvent) {
+          ready = document.createEvent('HTMLEvents');
+          ready.initEvent('pcache-ready', true, false);
+        } else {
+          ready = new Event('pcache-ready', {bubbles: true, cancelable: false});
+        }
+        document.dispatchEvent(ready);
+
+        if (__debug && window.performance) {
+          var loadingTime = window.performance.timing.loadEventStart - window.performance.timing.requestStart;
+          __debug && console.log('pcache-ready:', loadingTime / 1000, 'sec');
+          console.timeStamp && console.timeStamp('pcache-ready');
+        }
       }
-      document.dispatchEvent(ready);
 
       this.queryTags(['img', 'audio', 'video'], (function onMediaLoaded() {
         // Set lazyload images
@@ -974,7 +987,8 @@ idb.prototype = {
     };
   },
   remove: function(cache, callback, errorCallback) {
-    var req = this.db.transaction(['cache'], 'readwrite').objectStore('cache').delete(cache.url);
+    var store = this.db.transaction(['cache'], 'readwrite').objectStore('cache');
+    var req = store['delete'](cache.url);
     req.onsuccess = function(e) {
       if (typeof callback == 'function') callback();
     };
