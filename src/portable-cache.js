@@ -180,7 +180,6 @@ var canonicalizePath = function(path) {
   return '/'+path_.join('/');
 };
 
-
 var loadLazyImages = function(cacheList) {
   var scrollY = window.pageYOffset || document.documentElement.scrollTop;
   var pageHeight = window.innerHeight || document.documentElement.clientHeight;
@@ -822,7 +821,7 @@ fs.prototype = {
     var ls = this.ls;
     errorCallback = typeof errorCallback != 'function' ? function(){} : errorCallback;
   
-    var fileName = cache.url.replace(/\/|\\/g, '_');
+    var fileName = this.convertURL(cache.url);
     this.fs.root.getDirectory(STORAGE_NAME, {create: true, exclusive: false},
     function onGetDirectory(directoryEntry) {
       directoryEntry.getFile(fileName, {create: true, exclusive: false},
@@ -864,11 +863,11 @@ fs.prototype = {
     if (!this.ls) {
       errorCallback('storage not ready.');
     } else {
-      this.ls.get(cache, function(data) {
+      this.ls.get(cache, (function onLocalStorageGet(data) {
         if (cache.elem == null) {
           // Load blob if imperatively invoked
-          var fileName = cache.url.replace(/\/|\./g, '_');
-          this.fs.root.getDirectory(STORAGE_NAME, {create: false, exclusive: false},
+          var fileName = this.convertURL(cache.url);
+          this.fs.root.getDirectory(STORAGE_NAME, {create: true, exclusive: false},
           function onGetDirectory(directoryEntry) {
             directoryEntry.getFile(fileName, {create: false, exclusive: false},
             function onGetFile(fileEntry) {
@@ -879,20 +878,24 @@ fs.prototype = {
                 callback(data);
               },
               function(e) {
-                errorCallback('failed getting content: '+e);
+                // TODO: check error candidates
+                errorCallback('failed getting content: '+e.message);
               });
             },
             function onGetFileError(e) {
-              errorCallback('failed getting content: '+e);
+              // TODO: error here is transitioning from FileError to DOMError
+              __debug && console.error('[%s] %s', cache.url, e);
+              // Assume NotFoundError for the moment
+              callback(null);
             });
           },
           function onGetDirectoryError(e) {
-            errorCallback('failed getting directory: '+e);
+            errorCallback('failed getting directory: '+e.message);
           });
         } else {
           callback(data);
         }
-      }, errorCallback);
+      }).bind(this), errorCallback);
     }
   },
   remove: function(cache, callback, errorCallback) {
@@ -917,6 +920,9 @@ fs.prototype = {
     function onGetDirectoryError(e) {
       errorCallback('failed getting directory: '+e);
     });
+  },
+  convertURL: function(url) {
+    return url.replace(/\/|\\/g, '_');
   }
 };
 
