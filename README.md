@@ -1,29 +1,35 @@
+[![Analytics](https://ga-beacon.appspot.com/UA-46910666-1/agektmr/PortableCache.js)](https://github.com/igrigorik/ga-beacon)
+
 # PortableCache.js
 
-Cache assets, reduce downloads, load faster.  
-[![Analytics](https://ga-beacon.appspot.com/UA-46910666-1/agektmr/PortableCache.js)](https://github.com/igrigorik/ga-beacon)
+Cache assets, reduce downloads, load faster.
 
 ## What is PortableCache.js?
 
-AppCache is an offline enabler that can also speed up your website by reducing 
-the number of requests to a server. But there are a few glitches that keeps 
+[ApplicationCache](http://www.whatwg.org/specs/web-apps/current-work/multipage/offline.html) 
+is an offline enabler that can also speed up your website by reducing   
+the number of requests to a server. But there are a few glitches that keeps   
 people from using it. You might have wished:
 
 * Permanently cache heavy resources without caching root HTML.
-* Update assets without reloading. (AppCache needs page reload.)
-* Per content versioning. (AppCache requires entire resources to be refreshed on 
-  update.)
+* Update assets without reloading. (AppCache requires page reload.)
+* Per content versioning. (AppCache downloads entire resources in manifest 
+  again!)
 
 PortableCache.js is a resource loader for mobile web developers to solve those 
 problems.
 
-* Declarative APIs.
+* Declarative.
 * Uses the best available storage on user's browser:
     * FileSystem
     * IndexedDB
     * WebSQL
     * LocalStorage
-* Fallback gracefully when storage is not available.
+* Fallback gracefully when no storage mechanisms are available.
+* Provides imperative option to handle control.
+
+Couple of bonus points:
+
 * lazyload images.
 * Supports responsive images (NOT IMPLEMENTED YET).
 
@@ -110,7 +116,7 @@ to `data-cache-url`.
 
 You can use `async` attribute to indicate that the script can immediately 
 execute. Otherwise, scripts will be executed in order. `defer` attribute is not 
-supported (for natural reason).  
+supported (for natural reason).
 
     <script data-cache-url="js/main.js" async></script>
 

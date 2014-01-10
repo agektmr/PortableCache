@@ -1,4 +1,4 @@
-/*! portable-cache.js - v0.6.0 - 2014-01-09
+/*! portable-cache.js - v0.6.0 - 2014-01-10
 * https://github.com/agektmr/PortableCache.js
 * Copyright (c) 2014 Eiji Kitamura (agektmr+github@gmail.com); Licensed  */
 (function(window, document) {
@@ -185,6 +185,20 @@ var canonicalizePath = function(path) {
   return '/'+path_.join('/');
 };
 
+var resolveSrcset = function(src, srcset) {
+  var list = srcset.split(',');
+  for (var i = 0; i < list.length; i++) {
+    var tokens = list.split(' ');
+    // Ignore if there's only URL
+    if (tokens.length < 2) continue;
+    var url = tokens.shift();
+    var token;
+    while (token = tokens.shift(), token != undefined) {
+      var parsed = token.match(/^([0-9]+)(w|x)$/);
+    }
+  }
+};
+
 
 var loadLazyImages = function(cacheList) {
   var scrollY = window.pageYOffset || document.documentElement.scrollTop;
@@ -256,7 +270,12 @@ var CacheEntry = function(entry) {
     // If entry is an HTMLElement, all properties will be picked from the element.
     this.tag      = entry.nodeName.toLowerCase();
     this.elem     = entry;
-    this.url      = canonicalizePath(entry.getAttribute('data-cache-url'));
+    var url = entry.getAttribute('data-cache-url');
+    if (config['version'] != NOT_SUPPORTED) {
+      this.url    = canonicalizePath(url);
+    } else {
+      this.url    = url;
+    }
     this.version  = entry.getAttribute('data-cache-version') || config['version'];
     // async for script tag
     this.async    = entry.getAttribute('async') === null ? false : true;
@@ -638,7 +657,7 @@ var CacheManager = function() {
       document.head === undefined) {
     __debug && console.log('This browser is not supported.');
     config['version'] = NOT_SUPPORTED;
-    addEventListenerFn(document, 'load', bootstrap);
+    addEventListenerFn(window, 'load', bootstrap);
 
   } else {
     var errorCallback = function(errorMessage) {
@@ -650,7 +669,7 @@ var CacheManager = function() {
             document.readyState == 'loaded') {
           this.bootstrap();
         } else {
-          addEventListenerFn(document, 'load', bootstrap);
+          addEventListenerFn(window, 'load', bootstrap);
         }
       }
     };
@@ -670,7 +689,7 @@ var CacheManager = function() {
     if (!storage) {
       // No available storages found
       __debug && console.log('None of storages are available. Falling back.');
-      addEventListenerFn(document, 'load', bootstrap);
+      addEventListenerFn(window, 'load', bootstrap);
     }
   }
 };
@@ -691,14 +710,22 @@ CacheManager.prototype = {
     this.queryTags(['link', 'script'], (function onStyleLoaded() {
       document.body.style.display = 'block';
 
-      var ready;
-      if (document.createEvent) {
-        ready = document.createEvent('HTMLEvents');
-        ready.initEvent('pcache-ready', true, false);
-      } else {
-        ready = new Event('pcache-ready', {bubbles: true, cancelable: false});
+      if (config['version'] != NOT_SUPPORTED) {
+        var ready;
+        if (document.createEvent) {
+          ready = document.createEvent('HTMLEvents');
+          ready.initEvent('pcache-ready', true, false);
+        } else {
+          ready = new Event('pcache-ready', {bubbles: true, cancelable: false});
+        }
+        document.dispatchEvent(ready);
+
+        if (__debug && window.performance) {
+          var loadingTime = window.performance.timing.loadEventStart - window.performance.timing.requestStart;
+          __debug && console.log('pcache-ready:', loadingTime / 1000, 'sec');
+          console.timeStamp && console.timeStamp('pcache-ready');
+        }
       }
-      document.dispatchEvent(ready);
 
       this.queryTags(['img', 'audio', 'video'], (function onMediaLoaded() {
         // Set lazyload images
@@ -814,7 +841,7 @@ fs.prototype = {
     var ls = this.ls;
     errorCallback = typeof errorCallback != 'function' ? function(){} : errorCallback;
   
-    var fileName = cache.url.replace(/\/|\\/g, '_');
+    var fileName = this.convertURL(cache.url);
     this.fs.root.getDirectory(STORAGE_NAME, {create: true, exclusive: false},
     function onGetDirectory(directoryEntry) {
       directoryEntry.getFile(fileName, {create: true, exclusive: false},
@@ -856,11 +883,11 @@ fs.prototype = {
     if (!this.ls) {
       errorCallback('storage not ready.');
     } else {
-      this.ls.get(cache, function(data) {
+      this.ls.get(cache, (function onLocalStorageGet(data) {
         if (cache.elem == null) {
           // Load blob if imperatively invoked
-          var fileName = cache.url.replace(/\/|\./g, '_');
-          this.fs.root.getDirectory(STORAGE_NAME, {create: false, exclusive: false},
+          var fileName = this.convertURL(cache.url);
+          this.fs.root.getDirectory(STORAGE_NAME, {create: true, exclusive: false},
           function onGetDirectory(directoryEntry) {
             directoryEntry.getFile(fileName, {create: false, exclusive: false},
             function onGetFile(fileEntry) {
@@ -871,20 +898,24 @@ fs.prototype = {
                 callback(data);
               },
               function(e) {
-                errorCallback('failed getting content: '+e);
+                // TODO: check error candidates
+                errorCallback('failed getting content: '+e.message);
               });
             },
             function onGetFileError(e) {
-              errorCallback('failed getting content: '+e);
+              // TODO: error here is transitioning from FileError to DOMError
+              __debug && console.error('[%s] %s', cache.url, e);
+              // Assume NotFoundError for the moment
+              callback(null);
             });
           },
           function onGetDirectoryError(e) {
-            errorCallback('failed getting directory: '+e);
+            errorCallback('failed getting directory: '+e.message);
           });
         } else {
           callback(data);
         }
-      }, errorCallback);
+      }).bind(this), errorCallback);
     }
   },
   remove: function(cache, callback, errorCallback) {
@@ -909,6 +940,9 @@ fs.prototype = {
     function onGetDirectoryError(e) {
       errorCallback('failed getting directory: '+e);
     });
+  },
+  convertURL: function(url) {
+    return url.replace(/\/|\\/g, '_');
   }
 };
 
@@ -979,7 +1013,8 @@ idb.prototype = {
     };
   },
   remove: function(cache, callback, errorCallback) {
-    var req = this.db.transaction(['cache'], 'readwrite').objectStore('cache').delete(cache.url);
+    var store = this.db.transaction(['cache'], 'readwrite').objectStore('cache');
+    var req = store['delete'](cache.url);
     req.onsuccess = function(e) {
       if (typeof callback == 'function') callback();
     };
