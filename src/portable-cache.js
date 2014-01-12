@@ -146,7 +146,7 @@ var createBlob = function(content, type) {
  */
 var parseMetaContent = function(content, obj) {
   obj = obj || {};
-  var separate = content.split(/,\s*/g);
+  var separate = content.split(/\s*,\s*/g);
   for (var j = 0; j < separate.length; j++) {
     var matches = separate[j].split('=');
     if (matches.length === 2) {
@@ -178,6 +178,59 @@ var canonicalizePath = function(path) {
   } while (path_[0] == '..');
   path_ = prefix_.concat(path_);
   return '/'+path_.join('/');
+};
+
+var resolveSrcset = function(src, srcset, dpr, width) {
+  if (srcset == null) return src;
+
+  dpr = dpr || window.devicePixelRatio;
+  width = width || window.innerWidth;
+  var list = srcset.split(/\s*,\s*/g);
+  var candidates = [], i = 0;
+
+  candidates.push({url:src, w:Infinity, x:1});
+  for (i = 0; i < list.length; i++) {
+    var tokens = list[i].split(/\s+/g);
+    // Ignore if there's only URL
+    if (tokens.length < 2) continue;
+    var url = tokens.shift(),
+        token, cond = {url: url, x: 1, w: Infinity};
+    while (token = tokens.shift(), token != undefined) {
+      var parsed = token.match(/^([0-9\.]+)(w|x)$/);
+      // Ignore if this doesn't match the pattern
+      if (!parsed || parsed.length !== 3) continue;
+      cond[parsed[2]] = parsed[1]*1;
+    }
+    candidates.push(cond);
+  }
+
+  var bestw = Infinity, bestx = 0;
+  // find best width
+  for (i = 0; i < candidates.length; i++) {
+    var cand = candidates[i];
+    if (width <= cand.w && cand.w <= bestw) {
+      bestw = cand.w;
+    }
+  }
+  // find best dpr
+  for (i = 0; i < candidates.length; i++) {
+    var cand = candidates[i];
+    // traverse only best width
+    if (cand.w !== bestw) continue;
+    if (bestx === 0) {
+      bestx = cand.x;
+    } else if (dpr <= cand.x && (dpr > bestx || cand.x < bestx)) {
+      bestx = cand.x;
+    }
+  }
+  // find best candidate
+  for (i = 0; i < candidates.length; i++) {
+    var cand = candidates[i];
+    if (cand.x == bestx && cand.w == bestw) {
+      return cand.url;
+    }
+  }
+  return src;
 };
 
 var loadLazyImages = function(cacheList) {
@@ -251,10 +304,11 @@ var CacheEntry = function(entry) {
     this.tag      = entry.nodeName.toLowerCase();
     this.elem     = entry;
     var url = entry.getAttribute('data-cache-url');
+    var srcset = entry.getAttribute('data-cache-srcset');
     if (config['version'] != NOT_SUPPORTED) {
-      this.url    = canonicalizePath(url);
+      this.url    = canonicalizePath(resolveSrcset(url, srcset));
     } else {
-      this.url    = url;
+      this.url    = resolveSrcset(url, srcset);
     }
     this.version  = entry.getAttribute('data-cache-version') || config['version'];
     // async for script tag
@@ -864,7 +918,10 @@ fs.prototype = {
       errorCallback('storage not ready.');
     } else {
       this.ls.get(cache, (function onLocalStorageGet(data) {
-        if (cache.elem == null) {
+        if (data === null) {
+          // If not found, return null
+          callback(data);
+        } else if (cache.elem === null) {
           // Load blob if imperatively invoked
           var fileName = this.convertURL(cache.url);
           this.fs.root.getDirectory(STORAGE_NAME, {create: true, exclusive: false},
@@ -893,6 +950,7 @@ fs.prototype = {
             errorCallback('failed getting directory: '+e.message);
           });
         } else {
+          // If not a imperative request, return as is.
           callback(data);
         }
       }).bind(this), errorCallback);

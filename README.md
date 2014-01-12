@@ -28,15 +28,15 @@ problems.
 * Fallback gracefully when no storage mechanisms are available.
 * Provides imperative option to handle control.
 
-Couple of bonus points:
+Bonus points:
 
-* lazyload images.
-* Supports responsive images (NOT IMPLEMENTED YET).
+* Lazyload images.
+* Responsive images using `srcset` syntax.
 
 ## Demo
 ### [PortableCache Example](http://demo.agektmr.com/portable-cache/)
 
-Simplest declarative usage with lazyload images.
+Simplest declarative usage with lazyload images, responsive images.
 
 ### [Web Audio Drumpad](http://demo.agektmr.com/drumpad/)
 
@@ -67,10 +67,10 @@ attribute accepts comma separated parameters as listed below.
 <!-- TODO: Fix formatting of cells -->
 <table>
 <tr>
-<th>Key</th>
-<th>Value</th>
-<th>Default</th>
-<th>Details</th>
+<td>Key</td>
+<td>Value</td>
+<td>Default</td>
+<td>Details</td>
 </tr>
 <tr>
 <td>version</td>
@@ -140,9 +140,14 @@ override global version specified in `meta[name="portable-cache"]`.
 
     <img data-cache-url="img/image.jpg" data-cache-version="20131228">
 
-### Responsive images (NOT IMPLEMENTED)
+### Responsive images
 
-You can load responsive image by using `srcset` semantics. Details TBD.
+You can load responsive images by using `data-cache-srcset` with 
+[`srcset`](http://www.w3.org/html/wg/drafts/srcset/w3c-srcset/)[ 
+semantics](http://www.w3.org/html/wg/drafts/srcset/w3c-srcset/).  
+
+    <img data-cache-url="img/image.jpg" data-cache-srcset="img/image-320.jpg 320w, 
+img/image-640.jpg 320w 2w, img/image-640.jpg 640w">
 
 ## Imperative APIs
 
@@ -252,9 +257,9 @@ resources.
             <h2>Current Status</h2>
             <p>Under development. Very early stage.</p>
             <h2>Example Image Stabs</h2>
-            <img data-cache-url="img/abstract1_640x428.jpg" alt="" lazyload>
-            <img data-cache-url="img/abstract2_640x441.jpg" alt="" lazyload>
-            <img data-cache-url="img/abstract3_640x541.jpg" alt="" lazyload>
+            <img data-cache-url="img/abstract1_640x428.jpg"  data-cache-srcset="img/abstract1_320x214.jpg 320w, img/abstract1_640x428.jpg 640w, img/abstract1_640x428.jpg 320w 2x" alt="" lazyload>
+            <img data-cache-url="img/abstract2_640x441.jpg" data-cache-srcset="img/abstract2_320x220.jpg 320w, img/abstract2_640x441.jpg 640w, img/abstract2_640x441.jpg 320w 2x" alt="" lazyload>
+            <img data-cache-url="img/abstract3_640x541.jpg" data-cache-srcset="img/abstract3_240x203.jpg 240w, img/abstract3_640x541.jpg 640w, img/abstract3_640x541.jpg 320w 2x" alt="" lazyload>
             <h2>Author</h2>
             <ul>
               <li>Eiji Kitamura (<a href="http://google.com/+agektmr" target="_blank">+agektmr</a>, <a href="http://twitter.com/agektmr" target="_blank">@agektmr</a>)</li>
