@@ -67,10 +67,10 @@ attribute accepts comma separated parameters as listed below.
 <!-- TODO: Fix formatting of cells -->
 <table>
 <tr>
-<td>Key</td>
-<td>Value</td>
-<td>Default</td>
-<td>Details</td>
+<th>Key</th>
+<th>Value</th>
+<th>Default</th>
+<th>Details</th>
 </tr>
 <tr>
 <td>version</td>
@@ -107,20 +107,21 @@ attribute accepts comma separated parameters as listed below.
 ## Declarative APIs
 ### Caching and loading resources
 
-All you have to do is to replace attributes that indicates URL of the resource 
-to `data-cache-url`.
+All you have to do is to replace URL related attributes (such as `src`, `href`) 
+of the resource to `data-cache-url`. Currently, following HTML tags are 
+supported.
 
 #### script
 
     <script data-cache-url="js/main.js"></script>
 
-You can use `async` attribute to indicate that the script can immediately 
-execute. Otherwise, scripts will be executed in order. `defer` attribute is not 
+Use `async` attribute to execute the script as soon as it gets loaded. 
+Otherwise, scripts will be executed in DOM tree order. `defer` attribute is not 
 supported (for natural reason).
 
     <script data-cache-url="js/main.js" async></script>
 
-#### link
+#### link[rel="stylesheet"]
 
     <link rel="stylesheet" data-cache-url="css/style.css">
 
@@ -128,26 +129,29 @@ supported (for natural reason).
 
     <img data-cache-url="img/image.jpg">
 
-You can defer loading of images until user actually see them in viewport by 
-adding `lazyload` attribute.
+Add `lazyload` attribute to defer loading of images until user actually see them 
+in viewport.
 
     <img data-cache-url="img/image.jpg" lazyload>
 
+Use `data-cache-srcset` with 
+[`srcset`](http://www.w3.org/html/wg/drafts/srcset/w3c-srcset/)[ 
+semantics](http://www.w3.org/html/wg/drafts/srcset/w3c-srcset/) to load 
+responsive images depending on viewport.
+
+    <img data-cache-url="img/image.jpg" data-cache-srcset="img/image-320.jpg 320w, img/image-640.jpg 320w 2w, img/image-640.jpg 640w">
+
 ### Per element versioning
 
-You may want to retain version of certain cached elements. These versions will 
+You can optionally specify cache versions per element. These versions will 
 override global version specified in `meta[name="portable-cache"]`.
 
     <img data-cache-url="img/image.jpg" data-cache-version="20131228">
 
-### Responsive images
+As a technique, by assigning empty string to `data-cache-version`, you can skip 
+caching resource and apply lazyload and / or responsive image.
 
-You can load responsive images by using `data-cache-srcset` with 
-[`srcset`](http://www.w3.org/html/wg/drafts/srcset/w3c-srcset/)[ 
-semantics](http://www.w3.org/html/wg/drafts/srcset/w3c-srcset/).  
-
-    <img data-cache-url="img/image.jpg" data-cache-srcset="img/image-320.jpg 320w, 
-img/image-640.jpg 320w 2w, img/image-640.jpg 640w">
+    <img data-cache-url="img/image.jpg" data-cache-srcset="img/image-320.jpg 320w, img/image-640.jpg 320w 2w, img/image-640.jpg 640w" data-cache-version="" lazyload>
 
 ## Imperative APIs
 
@@ -194,20 +198,22 @@ Boolean value that indicates if lazyload is requested.
 
 ##### async
 
-async for `script` tag
+Boolean async flag for `script` tag
 
 #### Methods
 ##### load(callback)
 
-TBD
+Load resource of specified and resolved URL from cache if possible, otherwise 
+from remote server. Returns itself as an argument of callback function.
 
 ##### readCache(callback, errorCallback)
 
-TBD
+Reads cache from a storage. Returns as an argument of callback function (null if 
+not found).
 
 ##### createCache(cacheExists, callback, errorCallback)
 
-TBD
+Creates cache in a storage.
 
 ##### removeCache()
 
@@ -272,10 +278,13 @@ resources.
 ### AngularJS manual initialization
 #### HTML
 
+    <html ng-app="App">
+      ...
         <script data-cache-url="js/angular.js"></script>
         <script data-cache-url="js/audio.js"></script>
         <script data-cache-url="js/main.js"></script>
         <script src="js/portable-cache.js"></script>
+      ...
 
 #### JavaScript
 
