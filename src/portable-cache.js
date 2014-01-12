@@ -6,15 +6,6 @@ var config = {
   'debug-mode':         'no'
 };
 
-var viewport = {
-  'width':          'device-width',
-  'height':         'device-height',
-  'initial-scale':  1,
-  'minimum-scale':  1,
-  'maximum-scale':  1,
-  'user-scalable':  'yes'
-};
-
 var storage = null;
 
 var SPACER_GIF    = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==",
@@ -109,12 +100,13 @@ var base64encode = function(s) {
 };
 
 /**
- * Create Blob object with Android browser bug in mind.
- * @param  {[type]} content [description]
- * @param  {[type]} type    [description]
- * @return {[type]}         [description]
+ * Creates Blob object
+ * @param  {Blob|ArrayBuffer|string}  content   A Content consists of either ArrayBuffer or String to
+ *                                              create Blob from. If Blob, return as is.
+ * @param  {String}                   mimetype  A mimetype string of the Blob to create.
+ * @return {Blob}                               Generated Blob.
  */
-var createBlob = function(content, type) {
+var createBlob = function(content, mimetype) {
   var blob = null;
   if (content instanceof Blob) {
     return content;
@@ -123,45 +115,33 @@ var createBlob = function(content, type) {
   if (Blob) {
     try {
       // Android browser fails here
-      blob = new Blob([content], {type: type});
+      blob = new Blob([content], {type: mimetype});
     } catch(e) {
       var bb = new BlobBuilder();
       bb.append(content);
-      blob = bb.getBlob(type);
+      blob = bb.getBlob(mimetype);
     }
   // Are there still browsers with BlobBuilder support?
   } else if (BlobBuilder) {
     var bb = new BlobBuilder();
     bb.append(content);
-    blob = bb.getBlob(type);
+    blob = bb.getBlob(mimetype);
   }
   return blob;
 };
 
 /**
- * Parse content of meta element separated by comma
- * @param  String content   Content string to parse
- * @param  {Object} obj     Object to override
- * @return {Object}         Object overridden by parsed content
+ * Canonicalize URL path.
+ * ex) Converts '../css/style.css' into '/app/css/style.css'.
+ * @param  {string} path Path portion of URL that could be relatively specified.
+ * @return {string}      Path portion of URL absolutely specified.
  */
-var parseMetaContent = function(content, obj) {
-  obj = obj || {};
-  var separate = content.split(/\s*,\s*/g);
-  for (var j = 0; j < separate.length; j++) {
-    var matches = separate[j].split('=');
-    if (matches.length === 2) {
-      obj[matches[0]] = matches[1];
-    }
-  }
-  return obj;
-};
-
 var canonicalizePath = function(path) {
   if (path.indexOf('http') === 0 || path.indexOf('//') === 0) return path;
 
   var trim = function(s) {
-    return s==''?false:true;
-  }
+    return s===''?false:true;
+  };
   var prefix_ = location.pathname.split('/').filter(trim);
   var path_ = path.split('/');
   do {
@@ -180,13 +160,21 @@ var canonicalizePath = function(path) {
   return '/'+path_.join('/');
 };
 
+/**
+ * Resolve url from srcset syntax http://www.w3.org/html/wg/drafts/srcset/w3c-srcset/
+ * @param  {string}           src    Default URL
+ * @param  {string}           srcset srcset argument
+ * @param  {number|undefined} dpr    Device pixel ratio
+ * @param  {number|undefined} width  Viewport width
+ * @return {string} Parsed and resolved URL
+ */
 var resolveSrcset = function(src, srcset, dpr, width) {
-  if (srcset == null) return src;
+  if (srcset === null) return src;
 
   dpr = dpr || window.devicePixelRatio;
   width = width || window.innerWidth;
   var list = srcset.split(/\s*,\s*/g);
-  var candidates = [], i = 0;
+  var candidates = [], i = 0, cand;
 
   candidates.push({url:src, w:Infinity, x:1});
   for (i = 0; i < list.length; i++) {
@@ -195,7 +183,7 @@ var resolveSrcset = function(src, srcset, dpr, width) {
     if (tokens.length < 2) continue;
     var url = tokens.shift(),
         token, cond = {url: url, x: 1, w: Infinity};
-    while (token = tokens.shift(), token != undefined) {
+    while (token = tokens.shift(), token !== undefined) {
       var parsed = token.match(/^([0-9\.]+)(w|x)$/);
       // Ignore if this doesn't match the pattern
       if (!parsed || parsed.length !== 3) continue;
@@ -207,14 +195,14 @@ var resolveSrcset = function(src, srcset, dpr, width) {
   var bestw = Infinity, bestx = 0;
   // find best width
   for (i = 0; i < candidates.length; i++) {
-    var cand = candidates[i];
+    cand = candidates[i];
     if (width <= cand.w && cand.w <= bestw) {
       bestw = cand.w;
     }
   }
   // find best dpr
   for (i = 0; i < candidates.length; i++) {
-    var cand = candidates[i];
+    cand = candidates[i];
     // traverse only best width
     if (cand.w !== bestw) continue;
     if (bestx === 0) {
@@ -225,7 +213,7 @@ var resolveSrcset = function(src, srcset, dpr, width) {
   }
   // find best candidate
   for (i = 0; i < candidates.length; i++) {
-    var cand = candidates[i];
+    cand = candidates[i];
     if (cand.x == bestx && cand.w == bestw) {
       return cand.url;
     }
@@ -233,6 +221,10 @@ var resolveSrcset = function(src, srcset, dpr, width) {
   return src;
 };
 
+/**
+ * Load images that came into viewport from list of lazyload elements
+ * @param  {Array.<CacheEntry>} cacheList An array of CacheEntrys to lazyload
+ */
 var loadLazyImages = function(cacheList) {
   var scrollY = window.pageYOffset || document.documentElement.scrollTop;
   var pageHeight = window.innerHeight || document.documentElement.clientHeight;
@@ -290,8 +282,9 @@ var Cookies = {
 };
 
 /**
- * Cache Entry
- * @param {Object|HTMLElement} data   data object that 
+ * CacheEntry constructor. Takes either an Object or an HTMLElement.
+ * @param {Object|HTMLElement} data   Data object that 
+ * @constructor
  */
 var CacheEntry = function(entry) {
   this.src        = '';
@@ -310,7 +303,8 @@ var CacheEntry = function(entry) {
     } else {
       this.url    = resolveSrcset(url, srcset);
     }
-    this.version  = entry.getAttribute('data-cache-version') || config['version'];
+    var version = entry.getAttribute('data-cache-version');
+    this.version  = version !== null ? version : config['version'];
     // async for script tag
     this.async    = entry.getAttribute('async') === null ? false : true;
     this.type     = (/^(img|audio|video)/).test(this.tag) ? 'binary' : 'text';
@@ -319,12 +313,8 @@ var CacheEntry = function(entry) {
     this.tag      = entry.tag || '';
     this.elem     = null;
     this.url      = canonicalizePath(entry.url);
-    this.version  = entry.version || config['version'];
+    this.version  = typeof entry.version == 'string' ? entry.version : config['version'];
     this.type     = entry.type || 'text'; // (binary|json|text)
-  }
-
-  if (this.version === '') {
-    throw 'Cache version cannot be empty string.';
   }
 
   // Check if we really should skip legacy browsers
@@ -345,8 +335,8 @@ CacheEntry.prototype = {
       callback(this);
     };
 
-    // If non-supported browser, or only lazyload is requested, fallback
-    if (config['version'] == NOT_SUPPORTED || this.url === '') {
+    // If non-supported browser, no version specified, fallback
+    if (this.version === '' || config['version'] == NOT_SUPPORTED) {
       __debug && console.log('[%s] fallback without checking cache.', this.url);
       callback(this);
     // If previous version doesn't exist, fetch and construct;
@@ -557,7 +547,7 @@ CacheEntry.prototype = {
           this.elem.setAttribute('href', this.src);
           __debug && console.log('[%s] replaced href of <link>', this.url);
           callback();
-        } else if (this.content) {
+        } else if (this.content && this.elem.rel == 'stylesheet') {
           this.tag = 'style';
           this.elem = document.createElement('style');
           this.elem.textContent = this.content;
@@ -644,33 +634,8 @@ var CacheManager = function() {
   this.entries = [];
   this.lazyload = [];
 
-  // Load configuration and viewport
-  var _config = null,
-      _viewport = null;
-  if (document.querySelector) {
-    _config = document.querySelector('meta[name="portable-cache"]');
-    _viewport = document.querySelector('meta[name="viewport"]');
-  } else {
-    var metas = document.getElementsByTagName('meta');
-    for (var i = 0; i < metas.length; i++) {
-      var name = metas[i].getAttribute('name');
-      if (name == 'portable-cache') {
-        _config = metas[i];
-        continue;
-      }
-      if (name == 'viewport') {
-        _viewport = metas[i];
-      }
-    }
-  }
-  if (_config) {
-    // Load configuration
-    parseMetaContent(_config.getAttribute('content'), config);
-  }
-  if (_viewport) {
-    // Load viewport
-    parseMetaContent(_viewport.getAttribute('content'), viewport);
-  }
+  // Parse configuration
+  config = this.parseConfig();
 
   // Previous version number
   config['prev-version'] = Cookies.getItem('pcache_version');
@@ -824,6 +789,38 @@ CacheManager.prototype = {
           callback();
       });
     }
+  },
+  /**
+   * Parse meta[name="portable-cache"] and override global "config"
+   * @return {Object} Overridden global "config" object
+   */
+  parseConfig: function() {
+    // Load configuration
+    var meta = null;
+    if (document.querySelector) {
+      meta = document.querySelector('meta[name="portable-cache"]');
+    } else {
+      var metas = document.getElementsByTagName('meta');
+      for (var i = 0; i < metas.length; i++) {
+        var name = metas[i].getAttribute('name');
+        if (name == 'portable-cache') {
+          meta = metas[i];
+          break;
+        }
+      }
+    }
+    if (meta) {
+      // Load configuration
+      var content = meta.getAttribute('content');
+      var tokens = content.split(/\s*,\s*/g);
+      for (var j = 0; j < tokens.length; j++) {
+        var t = tokens[j].split('=');
+        if (t.length === 2) {
+          config[t[0]] = t[1];
+        }
+      }
+    }
+    return config;
   },
   getEntryByUrl: function(url) {
     for (var i = 0; i < this.entries.length; i++) {
@@ -1201,6 +1198,7 @@ ls.prototype = {
         }
         if (typeof callback == 'function') callback(data);
       } catch (e) {
+        __debug && console.error('[%s] %s', cache.url, e);
         if (typeof errorCallback == 'function')
           errorCallback(e.message);
       }
