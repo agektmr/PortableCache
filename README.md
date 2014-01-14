@@ -1,61 +1,172 @@
-[![Analytics](https://ga-beacon.appspot.com/UA-46910666-1/agektmr/PortableCache.js)](https://github.com/igrigorik/ga-beacon)
+# PortableCache
 
-# PortableCache.js
-
+[![Analytics](https://ga-beacon.appspot.com/UA-46910666-1/agektmr/PortableCache.js)](https://github.com/igrigorik/ga-beacon)  
 Cache assets, reduce downloads, load faster.
 
-## What is PortableCache.js?
+## What is PortableCache?
 
-[ApplicationCache](http://www.whatwg.org/specs/web-apps/current-work/multipage/offline.html) 
-is an offline enabler that can also speed up your website by reducing   
-the number of requests to a server. But there are a few glitches that keeps   
-people from using it. You might have wished:
+PortableCache is a small library for mobile web developers winning better 
+performance. Enables you to cache arbitrary resources (js, css, img, etc) in 
+static storage and reduce server request.
 
-* Permanently cache heavy resources without caching root HTML.
-* Update assets without reloading. (AppCache requires page reload.)
-* Per content versioning. (AppCache downloads entire resources in manifest 
-  again!)
-
-PortableCache.js is a resource loader for mobile web developers to solve those 
-problems.
-
-* Declarative.
+* Declarative (no JavaScript required).
 * Uses the best available storage on user's browser:
     * FileSystem
     * IndexedDB
     * WebSQL
     * LocalStorage
-* Fallback gracefully when no storage mechanisms are available.
-* Provides imperative option to handle control.
+* Fallback gracefully when no storage mechanism is available.
+* Provides imperative APIs for better control.
 
 Bonus points:
 
 * Lazyload images.
 * Responsive images using `srcset` syntax.
 
-## Demo
-### [PortableCache Example](http://demo.agektmr.com/portable-cache/)
+## Who should use it?
 
-Simplest declarative usage with lazyload images, responsive images.
+* Responsive web designers.
+* Performance enthusiasts.
+* Developers who have dreamed of using 
+  [ApplicationCache](http://www.whatwg.org/specs/web-apps/current-work/multipage/offline.html) 
+  to reduce traffic.
+
+Unlike AppCache, PortableCache can:
+
+* Permanently cache heavy resources without caching root HTML.
+* Update assets without reloading.
+* version per content.
+* maintain far easier.
+
+## Demo
+### [PortableCache](http://demo.agektmr.com/portable-cache/)
+
+Simplest example of using declarative API, lazyload and responsive images.
 
 ### [Web Audio Drumpad](http://demo.agektmr.com/drumpad/)
 
-Imperative resource caching with deferred AngularJS bootstrap.
+Imperative API usage example. Audio sample data are imperatively cached and used 
+as drum sound. It is a good example of deferred AngularJS (1.0.0~) bootstrap. 
+Works on Chrome, Safari and Firefox.
 
 ## Quick Start
 
-You can quickly try out this library by following 3 steps.
+You can quickly try out PortableCache by following 3 steps.
 
 1. Insert following `meta` tag to your existing project's `head` tag.<br/>
    `<meta name="portable-cache" content="version=20131228">`
-1. Insert `script` tag to load `portable-cache.min.js` (Make sure it is below 
+1. Insert `script` tag to load `portable-cache.js` (Make sure it is below 
    `meta[name="portable-cache"]`).<br/>
-   `<script 
-   src="https://raw.github.com/agektmr/PortableCache.js/0.6.0/dist/portable-cache.min.js">`
+   `<script src="js/portable-cache.js">`
 1. Replace attribute name of resources you'd like to cache to 
    `data-cache-url`.<br/>
    `<img src="img/image.jpg">`<br/>
    `<img data-cache-url="img/image.jpg">`
+
+## Installing PortableCache
+
+PortableCache is available thorugh [bower](http://bower.io/).
+
+    bower install PortableCache
+
+You can of course clone from repository.
+
+    git clone git@github.com:agektmr/PortableCache.git
+
+## Size (as of 0.7.1)
+
+* plain: 48KB
+* minified: 18KB
+* gzipped: 6.0KB
+
+## Examples
+### Simplest Declarative Example
+
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>PortableCache Example</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+        <meta name="portable-cache" content="version=20130630">
+        <link rel="stylesheet" data-cache-url="css/bootstrap.css">
+        <script src="js/portable-cache.js"></script>
+      </head>
+      <body>
+        <div class="navbar">
+          <div class="navbar-inner">
+            <div class="container">
+              <span class="brand">PortableCache</span>
+            </div>
+          </div>
+        </div>
+
+    ...........snip..............
+
+            <h2>Current Status</h2>
+            <p>Under development. Very early stage.</p>
+            <h2>Example Image Stabs</h2>
+            <img data-cache-url="img/abstract1_640x428.jpg"  data-cache-srcset="img/abstract1_320x214.jpg 320w, img/abstract1_640x428.jpg 640w, img/abstract1_640x428.jpg 320w 2x" alt="" lazyload>
+            <img data-cache-url="img/abstract2_640x441.jpg" data-cache-srcset="img/abstract2_320x220.jpg 320w, img/abstract2_640x441.jpg 640w, img/abstract2_640x441.jpg 320w 2x" alt="" lazyload>
+            <img data-cache-url="img/abstract3_640x541.jpg" data-cache-srcset="img/abstract3_240x203.jpg 240w, img/abstract3_640x541.jpg 640w, img/abstract3_640x541.jpg 320w 2x" alt="" lazyload>
+            <h2>Author</h2>
+            <ul>
+              <li>Eiji Kitamura (<a href="http://google.com/+agektmr" target="_blank">+agektmr</a>, <a href="http://twitter.com/agektmr" target="_blank">@agektmr</a>)</li>
+            </ul>
+          </div>
+        </div>
+      </body>
+    </html>
+
+### AngularJS manual initialization
+#### HTML
+
+    <html ng-app="App">
+      ...
+        <script data-cache-url="js/angular.js"></script>
+        <script data-cache-url="js/audio.js"></script>
+        <script data-cache-url="js/main.js"></script>
+        <script src="js/portable-cache.js"></script>
+      ...
+
+#### JavaScript
+
+    var app = angular.module('App', []);
+    app.directive('aDirective', function($window) {
+      ...
+    });
+    // Invoke Angular manual initialization after 'pcache-ready' event.
+    document.addEventListener('pcache-ready', function() {
+      angular.bootstrap(document, ['App']);
+    });
+
+### Imperative cache resource handling
+
+    var map = [
+      '/sample/snare.wav',
+      '/sample/bass.wav',
+      '/sample/hihat.wav'
+    ];
+    var ctx = new AudioContext();
+    var buffers = [];
+    for (var i = 0; i < map.length; i++) {
+      (function(i, url) {
+        var cache = new CacheEntry({url:url, type:'binary'});
+        cache.load(function(cache) {
+          cache.getContentAs('arraybuffer', function(b) {
+            ctx.decodeAudioData(b, function(buffer) {
+              buffers[i] = buffer;
+            });
+          });
+        });
+      })(i, map[i]);
+    }
+    var play = function(key) {
+      var s = ctx.createBufferSource();
+      s.buffer = buffers[key];
+      s.connect(ctx.destination);
+      s.start(0);
+    }
 
 ## Configuration
 
@@ -236,97 +347,9 @@ TBD
 PortableCache fires `pcache-ready` event after loading `link` and `script` 
 resources.
 
-## Examples
-### Simplest Declarative Example
-
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>PortableCache Example</title>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-        <meta name="portable-cache" content="version=20130630">
-        <link rel="stylesheet" data-cache-url="css/bootstrap.css">
-        <script src="js/portable-cache.js"></script>
-      </head>
-      <body>
-        <div class="navbar">
-          <div class="navbar-inner">
-            <div class="container">
-              <span class="brand">PortableCache.js</span>
-            </div>
-          </div>
-        </div>
-
-    ...........snip..............
-
-            <h2>Current Status</h2>
-            <p>Under development. Very early stage.</p>
-            <h2>Example Image Stabs</h2>
-            <img data-cache-url="img/abstract1_640x428.jpg"  data-cache-srcset="img/abstract1_320x214.jpg 320w, img/abstract1_640x428.jpg 640w, img/abstract1_640x428.jpg 320w 2x" alt="" lazyload>
-            <img data-cache-url="img/abstract2_640x441.jpg" data-cache-srcset="img/abstract2_320x220.jpg 320w, img/abstract2_640x441.jpg 640w, img/abstract2_640x441.jpg 320w 2x" alt="" lazyload>
-            <img data-cache-url="img/abstract3_640x541.jpg" data-cache-srcset="img/abstract3_240x203.jpg 240w, img/abstract3_640x541.jpg 640w, img/abstract3_640x541.jpg 320w 2x" alt="" lazyload>
-            <h2>Author</h2>
-            <ul>
-              <li>Eiji Kitamura (<a href="http://google.com/+agektmr" target="_blank">+agektmr</a>, <a href="http://twitter.com/agektmr" target="_blank">@agektmr</a>)</li>
-            </ul>
-          </div>
-        </div>
-      </body>
-    </html>
-
-### AngularJS manual initialization
-#### HTML
-
-    <html ng-app="App">
-      ...
-        <script data-cache-url="js/angular.js"></script>
-        <script data-cache-url="js/audio.js"></script>
-        <script data-cache-url="js/main.js"></script>
-        <script src="js/portable-cache.js"></script>
-      ...
-
-#### JavaScript
-
-    var app = angular.module('App', []);
-    app.directive('aDirective', function($window) {
-      ...
-    });
-    // Invoke Angular manual initialization after 'pcache-ready' event.
-    document.addEventListener('pcache-ready', function() {
-      angular.bootstrap(document, ['App']);
-    });
-
-### Imperative cache resource handling
-
-    var map = [
-      '/sample/snare.wav',
-      '/sample/bass.wav',
-      '/sample/hihat.wav'
-    ];
-    var buffer = [];
-    for (var i = 0; i < map.length; i++) {
-      (function(i, url) {
-        var cache = new CacheEntry({url:url, type:'binary'});
-        cache.load(function(cache) {
-          cache.getContentAs('arraybuffer', function(b) {
-            buffer[i] = c.createBuffer(b, false);
-          });
-        });
-      })(i, map[i]);
-    }
-
-## Server side optimization
-
-PortableCache sends a version string stored in cache as `pcache_version` in 
-cookie. Notably, if the browser is already proved to be unsupported (fallback 
-without caching), it carries a string `NOT_SUPPORTED` instead of a version 
-string. Use this cookie so your server can serve an HTML without 
-PortableCache.js in mind to avoid overheads.
-
 ## Browser Support
 
-Following browsers are supported by PortableCache.js.
+Following browsers are supported by PortableCache.
 
 * Chrome (FileSystem API)
 * Firefox (IndexedDB)
@@ -336,7 +359,7 @@ Following browsers are supported by PortableCache.js.
 * Android Browser 4 (WebSQL)
 * Safari 7 (WebSQL)
 
-Following browsers are confirmed to gracefully fallback on PortableCache.js
+Following browsers are confirmed to gracefully fallback on PortableCache
 
 * IE 6, 7, 8
 
@@ -347,6 +370,44 @@ Need tests on following browsers
 * Safari 6 (WebSQL)
 
 Browsers not listed here are yet to be tested.
+
+## FAQ
+### What happens if storage's quota exceed?
+
+If quota exceeds on user's browser, PortableCache will simply give up storing 
+cache and fallback to use remote resource. But some browsers request permission 
+for larger quota to users. On any of those browsers, PortableCache will handle 
+gracefully and continue using storage if granted.
+
+### How do I separate cache version per directory?
+
+You may notice version string you have assigned to a website is tied to the 
+entire host, potentially overwriting same host's other apps' versions which is 
+path separated.  
+For example, you have an app on  
+[http://example.com/app-a/](http://example.com/app/)  
+Then you create another app on  
+[http://example.com/app-b/](http://example.com/app-b/)  
+In this case, whichever app user opens will overwrite the other app's version 
+string.
+
+You can avoid this by giving `root-path` to `meta[name="portable-cache"]`.
+
+    <meta name="portable-cache" content="version=20130110, root-path=/app-a">
+
+### Can I use lazyload / responsive image features without caching?
+
+Absolutely. Just set `data-cache-version` as an empty string. PortableCache will 
+simply use remote resource URL with lazyload / srcset features left available.
+
+### Can I detect unsupported browsers on server side?
+
+You may wish to remove PortableCache if a browser is known to be unsupported.  
+You can use a version string stored as `pcache_version` in cookie which  
+PortableCache sends. If a browser is already proved to be unsupported (fallback 
+without caching), it carries a string `NOT_SUPPORTED` instead of a version 
+string. Catch this cookie on your server so it can serve an HTML without 
+PortableCache to avoid JavaScript parsing overheads.
 
 ## Author
 
