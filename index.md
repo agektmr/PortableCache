@@ -86,19 +86,21 @@ Browsers not listed here are yet to be tested.
 
 Open DevTools and check how images are stored, lazyload and responsively embedded.
 
-<img data-cache-url="_layouts/img/abstract1_1024x685.jpg" data-cache-srcset="img/abstract1_320x214.jpg 320w, img/abstract1_640x428.jpg 640w, img/abstract1_640x428.jpg 320w 2x" class="img-responsive" alt="Cached responsive image">
+<img data-cache-url="assets/img/abstract1_1024x685.jpg" data-cache-srcset="img/abstract1_320x214.jpg 320w, img/abstract1_640x428.jpg 640w, img/abstract1_640x428.jpg 320w 2x" class="img-responsive" alt="Cached responsive image">
 Photo by [Jim Nix / Nomadic](http://www.flickr.com/photos/jimnix/4971254545/)
 
-<img data-cache-url="_layouts/img/abstract2_864x595.jpg" data-cache-srcset="img/abstract2_320x220.jpg 320w, img/abstract2_640x441.jpg 640w, img/abstract2_640x441.jpg 320w 2x" class="img-responsive" alt="Cached responsive and lazyloaded image" lazyload>
+<img data-cache-url="assets/img/abstract2_864x595.jpg" data-cache-srcset="img/abstract2_320x220.jpg 320w, img/abstract2_640x441.jpg 640w, img/abstract2_640x441.jpg 320w 2x" class="img-responsive" alt="Cached responsive and lazyloaded image" lazyload>
 
 Photo by [zen](http://www.flickr.com/photos/zen/9990061573/)
 
-<img data-cache-url="_layouts/img/abstract3_1200x1015.jpg" data-cache-srcset="_layouts/img/abstract3_240x203.jpg 240w, _layouts/img/abstract3_640x541.jpg 640w, _layouts/img/abstract3_640x541.jpg 320w 2x" data-cache-version="" class="img-responsive" alt="Uncached responsive and lazyloaded image" lazyload>
+<img data-cache-url="assets/img/abstract3_1200x1015.jpg" data-cache-srcset="assets/img/abstract3_240x203.jpg 240w, assets/img/abstract3_640x541.jpg 640w, assets/img/abstract3_640x541.jpg 320w 2x" data-cache-version="" class="img-responsive" alt="Uncached responsive and lazyloaded image" lazyload>
 
 Photo by [cobalt123](http://www.flickr.com/photos/cobalt/513184722/)
 
 ## Author
 
-### Eiji Kitamura</h4>
-<img data-cache-url="img/agektmr-s.jpg" class="media-object profile" lazyload>
+### Eiji Kitamura
+
+<img data-cache-url="assets/img/agektmr-s.jpg" class="profile" lazyload>
+
 [+agektmr](https://google.com/+agektmr), [@agektmr](https://twitter.com/agektmr)
