@@ -23,7 +23,7 @@ Bonus points:
 * Lazyload images.
 * Responsive images using `srcset` syntax.
 
-## Who should use it?
+### Who should use it?
 
 * Responsive web designers.
 * Performance enthusiasts.
@@ -73,7 +73,7 @@ You can of course clone from repository.
 
     git clone git@github.com:agektmr/PortableCache.git
 
-## Size (as of 0.7.1)
+### Size (as of 0.7.1)
 
 * plain: 48KB
 * minified: 18KB
@@ -266,50 +266,22 @@ caching resource and apply lazyload and / or responsive image.
 
 ## Imperative APIs
 
-For configuration, use `meta[name="portable-cache"]` explained at Declarative 
-APIs.
+For configuration, use `meta[name="portable-cache"]` explained at 
+[Configuration](#heading=h.22icwdk2g7hl).
 
 ### CacheEntry
 #### Properties
-##### url
 
-URL of this resource that can replace `src` when fallback.
-
-##### src
-
-Resource URL to be replaced with `src` or `href`
-
-##### tag
-
-HTML tag associated with this CacheEntry
-
-##### type
-
-Request type on XHR (binary|json|text)
-
-##### mimetype
-
-MIME Type of remote resource.
-
-##### version
-
-Cache version string.
-
-##### content
-
-Resource content which is either Blob or text.
-
-##### elem
-
-Original DOM Element.
-
-##### lazyload
-
-Boolean value that indicates if lazyload is requested.
-
-##### async
-
-Boolean async flag for `script` tag
+**url** URL of this resource that can replace `src` when fallback.  
+**src** Resource URL to be replaced with `src` or `href`  
+**tag** HTML tag associated with this CacheEntry  
+**type** Request type on XHR (binary|json|text)  
+**mimetype** MIME Type of remote resource.  
+**version** Cache version string.  
+**content** Resource content which is either Blob or text.  
+**elem** Original DOM Element.  
+**lazyload** Boolean value that indicates if lazyload is requested.  
+**async** Boolean async flag for `script` tag
 
 #### Methods
 ##### load(callback)
@@ -347,30 +319,6 @@ TBD
 PortableCache fires `pcache-ready` event after loading `link` and `script` 
 resources.
 
-## Browser Support
-
-Following browsers are supported by PortableCache.
-
-* Chrome (FileSystem API)
-* Firefox (IndexedDB)
-* IE 9 (LocalStorage)
-* IE 10, 11 (IndexedDB)
-* Android Browser 2.3 (WebSQL)
-* Android Browser 4 (WebSQL)
-* Safari 7 (WebSQL)
-
-Following browsers are confirmed to gracefully fallback on PortableCache
-
-* IE 6, 7, 8
-
-Need tests on following browsers
-
-* Android Browser 3 (WebSQL)
-* Safari 5 (WebSQL)
-* Safari 6 (WebSQL)
-
-Browsers not listed here are yet to be tested.
-
 ## FAQ
 ### What happens if storage's quota exceed?
 
@@ -395,6 +343,9 @@ You can avoid this by giving `root-path` to `meta[name="portable-cache"]`.
 
     <meta name="portable-cache" content="version=20130110, root-path=/app-a">
 
+This way, the version string is tied to the app path rather than the entire 
+host.
+
 ### Can I use lazyload / responsive image features without caching?
 
 Absolutely. Just set `data-cache-version` as an empty string. PortableCache will 
@@ -408,6 +359,30 @@ PortableCache sends. If a browser is already proved to be unsupported (fallback
 without caching), it carries a string `NOT_SUPPORTED` instead of a version 
 string. Catch this cookie on your server so it can serve an HTML without 
 PortableCache to avoid JavaScript parsing overheads.
+
+## Browser Support
+
+Following browsers are supported by PortableCache.
+
+* Chrome (FileSystem API)
+* Firefox (IndexedDB)
+* IE 9 (LocalStorage)
+* IE 10, 11 (IndexedDB)
+* Android Browser 2.3 (WebSQL)
+* Android Browser 4 (WebSQL)
+* Safari 7 (WebSQL)
+
+Following browsers are confirmed to gracefully fallback on PortableCache
+
+* IE 6, 7, 8
+
+Need tests on following browsers
+
+* Android Browser 3 (WebSQL)
+* Safari 5 (WebSQL)
+* Safari 6 (WebSQL)
+
+Browsers not listed here are yet to be tested.
 
 ## Author
 

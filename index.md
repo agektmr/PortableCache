@@ -1,38 +1,38 @@
 ---
 layout: default
 ---
-# PortableCache
+PortableCache is a small library for mobile web developers winning better 
+performance. Enables you to cache arbitrary resources (js, css, img, etc) in 
+static storage and reduce server request.
 
-Cache assets, reduce downloads, load faster.
-
-## What is PortableCache?
-
-[ApplicationCache](http://www.whatwg.org/specs/web-apps/current-work/multipage/offline.html) 
-is an offline enabler that can also speed up your website by reducing   
-the number of requests to a server. But there are a few glitches that keeps   
-people from using it. You might have wished:
-
-* Permanently cache heavy resources without caching root HTML.
-* Update assets without reloading. (AppCache requires page reload.)
-* Per content versioning. (AppCache downloads entire resources in manifest 
-  again!)
-
-PortableCache is a resource loader for mobile web developers to solve those 
-problems.
-
-* Declarative.
+* Declarative (no JavaScript required).
 * Uses the best available storage on user's browser:
     * FileSystem
     * IndexedDB
     * WebSQL
     * LocalStorage
-* Fallback gracefully when no storage mechanisms are available.
-* Provides imperative option to handle control.
+* Fallback gracefully when no storage mechanism is available.
+* Provides imperative APIs for better control.
 
 Bonus points:
 
 * Lazyload images.
 * Responsive images using `srcset` syntax.
+
+### Who should use it?
+
+* Responsive web designers.
+* Performance enthusiasts.
+* Developers who have dreamed of using 
+  [ApplicationCache](http://www.whatwg.org/specs/web-apps/current-work/multipage/offline.html) 
+  to reduce traffic.
+
+Unlike AppCache, PortableCache can:
+
+* Permanently cache heavy resources without caching root HTML.
+* Update assets without reloading.
+* version per content.
+* maintain far easier.
 
 ## Demo
 ### [PortableCache Example](http://demo.agektmr.com/portable-cache/)
@@ -45,18 +45,74 @@ Imperative resource caching with deferred AngularJS bootstrap.
 
 ## Quick Start
 
-You can quickly try out this library by following 3 steps.
+You can quickly try out PortableCache by following 3 steps.
 
 1. Insert following `meta` tag to your existing project's `head` tag.<br/>
    `<meta name="portable-cache" content="version=20131228">`
-1. Insert `script` tag to load `portable-cache.min.js` (Make sure it is below 
+1. Insert `script` tag to load `portable-cache.js` (Make sure it is below 
    `meta[name="portable-cache"]`).<br/>
-   `<script 
-   src="https://raw.github.com/agektmr/PortableCache/0.6.0/dist/portable-cache.min.js">`
+   `<script src="js/portable-cache.js">`
 1. Replace attribute name of resources you'd like to cache to 
    `data-cache-url`.<br/>
    `<img src="img/image.jpg">`<br/>
    `<img data-cache-url="img/image.jpg">`
+
+## Installing PortableCache
+
+PortableCache is available thorugh [bower](http://bower.io/).
+
+    bower install PortableCache
+
+You can of course clone from repository.
+
+    git clone git@github.com:agektmr/PortableCache.git
+
+### Size (as of 0.7.1)
+
+* plain: 48KB
+* minified: 18KB
+* gzipped: 6.0KB
+
+## FAQ
+### What happens if storage's quota exceed?
+
+If quota exceeds on user's browser, PortableCache will simply give up storing 
+cache and fallback to use remote resource. But some browsers request permission 
+for larger quota to users. On any of those browsers, PortableCache will handle 
+gracefully and continue using storage if granted.
+
+### How do I separate cache version per directory?
+
+You may notice version string you have assigned to a website is tied to the 
+entire host, potentially overwriting same host's other apps' versions which is 
+path separated.  
+For example, you have an app on  
+[http://example.com/app-a/](http://example.com/app/)  
+Then you create another app on  
+[http://example.com/app-b/](http://example.com/app-b/)  
+In this case, whichever app user opens will overwrite the other app's version 
+string.
+
+You can avoid this by giving `root-path` to `meta[name="portable-cache"]`.
+
+    <meta name="portable-cache" content="version=20130110, root-path=/app-a">
+
+This way, the version string is tied to the app path rather than the entire 
+host.
+
+### Can I use lazyload / responsive image features without caching?
+
+Absolutely. Just set `data-cache-version` as an empty string. PortableCache will 
+simply use remote resource URL with lazyload / srcset features left available.
+
+### Can I detect unsupported browsers on server side?
+
+You may wish to remove PortableCache if a browser is known to be unsupported.  
+You can use a version string stored as `pcache_version` in cookie which  
+PortableCache sends. If a browser is already proved to be unsupported (fallback 
+without caching), it carries a string `NOT_SUPPORTED` instead of a version 
+string. Catch this cookie on your server so it can serve an HTML without 
+PortableCache to avoid JavaScript parsing overheads.
 
 ## Browser Support
 
