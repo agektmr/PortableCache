@@ -1,8 +1,11 @@
 {
-  "name": "portable-cache.js",
-  "version": "0.7.0",
+  "name": "PortableCache",
+  "version": "0.7.1",
   "description": "Cache assets, reduce downloads, load faster.",
-  "main": "dist/portable-cache.js",
+  "main": [
+    "dist/portable-cache.js",
+    "dist/portable-cache.min.js"
+  ],
   "devDependencies": {
     "grunt": "~0.4.1",
     "grunt-contrib-concat": "~0.3.0",
@@ -14,8 +17,8 @@
   "scripts": {
     "test": ""
   },
-  "homepage": "https://github.com/agektmr/PortableCache.js",
-  "repository": "git@github.com:agektmr/PortableCache.js.git",
+  "homepage": "https://github.com/agektmr/PortableCache",
+  "repository": "git@github.com:agektmr/PortableCache.git",
   "author": "Eiji Kitamura (agektmr+github@gmail.com)",
   "license": "Apache2.0"
 }

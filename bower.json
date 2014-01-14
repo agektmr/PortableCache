@@ -1,13 +1,24 @@
 {
-  "name": "portable-cache.js",
-  "version": "0.7.0",
-  "main": "dist/portable-cache.js",
+  "name": "PortableCache",
+  "version": "0.7.1",
+  "main": [
+    "dist/portable-cache.js",
+    "dist/portable-cache.min.js"
+  ],
   "dependencies": {},
   "repository": {
     "type": "git",
-    "url": "git://github.com/agektmr/PortableCache.js"
+    "url": "git://github.com/agektmr/PortableCache"
   },
   "devDependencies": {
     "bootstrap": "~3.0.3"
-  }
+  },
+  "ignore": [
+    ".*",
+    "_*",
+    "*.md",
+    "src",
+    "Gruntfile.js",
+    "package.json"
+  ]
 }
