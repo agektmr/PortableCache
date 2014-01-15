@@ -10,9 +10,7 @@
     "type": "git",
     "url": "git://github.com/agektmr/PortableCache"
   },
-  "devDependencies": {
-    "bootstrap": "~3.0.3"
-  },
+  "devDependencies": {},
   "ignore": [
     ".*",
     "_*",
