@@ -162,7 +162,7 @@ var canonicalizePath = function(path) {
     }
   } while (path_[0] == '..');
   path_ = prefix_.concat(path_);
-  return '/'+path_.join('/');
+  return location.origin+'/'+path_.join('/');
 };
 
 /**
@@ -405,6 +405,13 @@ CacheEntry.prototype = {
       if (typeof errorCallback == 'function')
         errorCallback('storage not ready');
       return;
+    }
+
+    // Apply only to css files
+    if (this.url.indexOf('.css') !== -1) {
+      this.content = this.content.replace(/url\('?(.*?)'?\)/g, function onReplace(pattern, match) {
+        return "url('"+canonicalizePath(match)+"')";
+      });
     }
 
     var cache = this;
