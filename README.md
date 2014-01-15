@@ -73,7 +73,7 @@ You can of course clone from repository.
 
     git clone git@github.com:agektmr/PortableCache.git
 
-### Size (as of 0.7.1)
+### Size (as of 0.7.2)
 
 * plain: 47.5KB
 * minified: 18.1KB

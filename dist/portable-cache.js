@@ -1,4 +1,4 @@
-/*! PortableCache - v0.7.1 - 2014-01-15
+/*! PortableCache - v0.7.2 - 2014-01-15
 * https://github.com/agektmr/PortableCache
 * Copyright (c) 2014 Eiji Kitamura (agektmr+github@gmail.com); Licensed  */
 (function(window, document) {
@@ -142,7 +142,8 @@ var createBlob = function(content, mimetype) {
  * @return {string}      Path portion of URL absolutely specified.
  */
 var canonicalizePath = function(path) {
-  if (path.indexOf('http') === 0 || path.indexOf('//') === 0) return path;
+  if (path.indexOf('http') === 0) return path;
+  if (path.indexOf('//') === 0) return location.protocol+path;
 
   var trim = function(s) {
     return s===''?false:true;

@@ -137,7 +137,8 @@ var createBlob = function(content, mimetype) {
  * @return {string}      Path portion of URL absolutely specified.
  */
 var canonicalizePath = function(path) {
-  if (path.indexOf('http') === 0 || path.indexOf('//') === 0) return path;
+  if (path.indexOf('http') === 0) return path;
+  if (path.indexOf('//') === 0) return location.protocol+path;
 
   var trim = function(s) {
     return s===''?false:true;
