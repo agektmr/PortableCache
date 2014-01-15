@@ -7,14 +7,14 @@ PortableCache is a small library for mobile web developers winning better
 performance. Enables you to cache arbitrary resources (js, css, img, etc) in 
 static storage and reduce server request.
 
-* Declarative (no JavaScript required).
+* Declarative APIs (no JavaScript required).
 * Uses the best available storage on user's browser:
     * FileSystem
     * IndexedDB
     * WebSQL
     * LocalStorage
 * Fallback gracefully when no storage mechanism is available.
-* Provides imperative APIs for better control.
+* Provides imperative APIs as well for fine grained control.
 
 Bonus points:
 
@@ -37,13 +37,15 @@ Unlike AppCache, PortableCache can:
 * maintain far easier.
 
 ## Demo
-### [PortableCache Example](http://demo.agektmr.com/portable-cache/)
+### [PortableCache](http://demo.agektmr.com/portable-cache/)
 
-Simplest declarative usage with lazyload images, responsive images.
+Simplest example of using declarative API, lazyload and responsive images.
 
 ### [Web Audio Drumpad](http://demo.agektmr.com/drumpad/)
 
-Imperative resource caching with deferred AngularJS bootstrap.
+Imperative API usage example. Audio sample data are imperatively cached and used 
+as drum sound. It is a good example of deferred AngularJS (1.0.0~) bootstrap. 
+Works on Chrome, Safari and Firefox.
 
 ## Quick Start
 
@@ -69,13 +71,19 @@ You can of course clone from repository.
 
     git clone git@github.com:agektmr/PortableCache.git
 
-### Size (as of 0.7.1)
+### Size (as of 0.7.3)
 
-* plain: 47.5KB
-* minified: 18.1KB
-* gzipped: 6.9KB
+* plain: 47.8KB
+* minified: 18.3KB
+* gzipped: 7.0KB
 
 ## FAQ
+### When exactly is `pcache-ready` event called?
+
+PortableCache bootstraps loading `link` tag and `script` tag first. pcache-ready 
+event fires after all `link` tags and `script` tags (except ones with `async` 
+attribute attached) are loaded and executed.
+
 ### What happens if storage's quota exceed?
 
 If quota exceeds on user's browser, PortableCache will simply give up storing 
@@ -83,7 +91,7 @@ cache and fallback to use remote resource. But some browsers request permission
 for larger quota to users. On any of those browsers, PortableCache will handle 
 gracefully and continue using storage if granted.
 
-### How do I separate cache version per directory?
+### How do I separate cache version per URL path?
 
 You may notice version string you have assigned to a website is tied to the 
 entire host, potentially overwriting same host's other apps' versions which is 
@@ -106,6 +114,8 @@ host.
 
 Absolutely. Just set `data-cache-version` as an empty string. PortableCache will 
 simply use remote resource URL with lazyload / srcset features left available.
+
+    <img data-cache-url="img/image.jpg" data-cache-srcset="img/image-320.jpg 320w, img/image-640.jpg 640w, img/image-640.jpg 320w 2x" data-cache-version="" lazyload>
 
 ### Can I detect unsupported browsers on server side?
 
