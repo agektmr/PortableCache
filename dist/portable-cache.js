@@ -1,4 +1,4 @@
-/*! PortableCache - v0.7.2 - 2014-01-15
+/*! PortableCache - v0.7.3 - 2014-01-15
 * https://github.com/agektmr/PortableCache
 * Copyright (c) 2014 Eiji Kitamura (agektmr+github@gmail.com); Licensed  */
 (function(window, document) {
