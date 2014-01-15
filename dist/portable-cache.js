@@ -410,7 +410,7 @@ CacheEntry.prototype = {
 
     // Apply only to css files
     if (this.url.indexOf('.css') !== -1) {
-      this.content = this.content.replace(/url\('?(.*?)'?\)/g, function onReplace(pattern, match) {
+      this.content = this.content.replace(/url\('?"?(.*?)"?'?\)/g, function onReplace(pattern, match) {
         return "url('"+canonicalizePath(match)+"')";
       });
     }
