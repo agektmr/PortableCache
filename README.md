@@ -38,12 +38,23 @@ Unlike AppCache, PortableCache can:
 * version per content.
 * maintain far easier.
 
-## Demo
-### [PortableCache](http://demo.agektmr.com/portable-cache/)
+## Examples
+
+### Example Codes
+
+Visit [Example codes page on GitHub Wiki](https://github.com/agektmr/PortableCache/wiki/Example-Codes).
+
+### APIs
+
+Visit [APIs page on GitHub Wiki](https://github.com/agektmr/PortableCache/wiki/APIs).
+
+### Demos
+
+#### [PortableCache](http://demo.agektmr.com/portable-cache/)
 
 Simplest example of using declarative API, lazyload and responsive images.
 
-### [Web Audio Drumpad](http://demo.agektmr.com/drumpad/)
+#### [Web Audio Drumpad](http://demo.agektmr.com/drumpad/)
 
 Imperative API usage example. Audio sample data are imperatively cached and used 
 as drum sound. It is a good example of deferred AngularJS (1.0.0~) bootstrap. 
