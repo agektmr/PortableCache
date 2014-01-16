@@ -8,5 +8,6 @@
 bower_components
 node_modules
 *.sublime-*
+params.json
 sftp-config.json
 README.html
