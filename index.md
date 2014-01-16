@@ -42,10 +42,6 @@ Unlike AppCache, PortableCache can:
 
 Visit [Example codes page on GitHub Wiki](https://github.com/agektmr/PortableCache/wiki/Example-Codes).
 
-### APIs
-
-Visit [APIs page on GitHub Wiki](https://github.com/agektmr/PortableCache/wiki/APIs).
-
 ### Demos
 
 #### [PortableCache](http://demo.agektmr.com/portable-cache/)
@@ -87,6 +83,34 @@ You can of course clone from repository.
 * plain: 47.8KB
 * minified: 18.3KB
 * gzipped: 7.0KB
+
+## APIs
+
+Visit [APIs page on GitHub Wiki](https://github.com/agektmr/PortableCache/wiki/APIs).
+
+## Browser Support
+
+Following browsers are supported by PortableCache.
+
+* Chrome (FileSystem API)
+* Firefox (IndexedDB)
+* IE 9 (LocalStorage)
+* IE 10, 11 (IndexedDB)
+* Android Browser 2.3 (WebSQL)
+* Android Browser 4 (WebSQL)
+* Safari 7 (WebSQL)
+
+Following browsers are confirmed to gracefully fallback on PortableCache
+
+* IE 6, 7, 8
+
+Need tests on following browsers
+
+* Android Browser 3 (WebSQL)
+* Safari 5 (WebSQL)
+* Safari 6 (WebSQL)
+
+Browsers not listed here are yet to be tested.
 
 ## FAQ
 ### When exactly is `pcache-ready` event called?
@@ -136,30 +160,6 @@ PortableCache sends. If a browser is already proved to be unsupported (fallback
 without caching), it carries a string `NOT_SUPPORTED` instead of a version 
 string. Catch this cookie on your server so it can serve an HTML without 
 PortableCache to avoid JavaScript parsing overheads.
-
-## Browser Support
-
-Following browsers are supported by PortableCache.
-
-* Chrome (FileSystem API)
-* Firefox (IndexedDB)
-* IE 9 (LocalStorage)
-* IE 10, 11 (IndexedDB)
-* Android Browser 2.3 (WebSQL)
-* Android Browser 4 (WebSQL)
-* Safari 7 (WebSQL)
-
-Following browsers are confirmed to gracefully fallback on PortableCache
-
-* IE 6, 7, 8
-
-Need tests on following browsers
-
-* Android Browser 3 (WebSQL)
-* Safari 5 (WebSQL)
-* Safari 6 (WebSQL)
-
-Browsers not listed here are yet to be tested.
 
 ## Author
 
