@@ -297,11 +297,13 @@ var CacheEntry = function(entry) {
   this.content    = '';
   this.mimetype   = '';
   this.lazyload   = false;
+  this.root       = document;
 
   if (entry.nodeName) {
     // If entry is an HTMLElement, all properties will be picked from the element.
     this.tag      = entry.nodeName.toLowerCase();
     this.elem     = entry;
+    this.root     = this.elem.ownerDocument;
     var url = entry.getAttribute('data-cache-url');
     var srcset = entry.getAttribute('data-cache-srcset');
     if (config['version'] != NOT_SUPPORTED) {
@@ -585,7 +587,7 @@ CacheEntry.prototype = {
           this.elem = document.createElement('script');
           this.elem.async = this.async;
           this.elem.textContent = this.content;
-          document.head.appendChild(this.elem);
+          this.root.head.appendChild(this.elem);
           __debug && console.log('[%s] inlined to <script>', this.url);
           callback();
           return;
@@ -597,7 +599,6 @@ CacheEntry.prototype = {
         }
         break;
       case 'text/css':
-        // TODO: link tag isn't necessarily a stylesheet
         // TODO: support templates (angular, handlebar, webcomponents, etc)
         if (this.src) {
           this.elem.setAttribute('href', this.src);
@@ -607,7 +608,7 @@ CacheEntry.prototype = {
           this.tag = 'style';
           this.elem = document.createElement('style');
           this.elem.textContent = this.content;
-          document.head.appendChild(this.elem);
+          this.root.head.appendChild(this.elem);
           __debug && console.log('[%s] inserted <style>', this.url);
           callback();
         } else {
@@ -769,7 +770,7 @@ PortableCache.prototype = {
 
     // Prevent flash
     document.body.style.display = 'none';
-    this.queryTags(['link', 'script'], (function onStyleLoaded() {
+    this.queryTags(document, ['link', 'script'], (function onStyleLoaded() {
       document.body.style.display = 'block';
 
       if (config['version'] != NOT_SUPPORTED) {
@@ -789,7 +790,7 @@ PortableCache.prototype = {
         }
       }
 
-      this.queryTags(['img', 'audio', 'video'], (function onMediaLoaded() {
+      this.queryTags(document, ['img', 'audio', 'video'], (function onMediaLoaded() {
         // Set lazyload images
         if (this.lazyload.length > 0) {
           addEventListenerFn(document, 'scroll', onLazyload);
@@ -798,8 +799,8 @@ PortableCache.prototype = {
     }).bind(this));
     Cookies.setItem('pcache_version', config['version'], null, config['root-path']);
   },
-  resolveTag: function(query, callback) {
-    var tags  = document.getElementsByTagName(query),
+  resolveTag: function(root, query, callback) {
+    var tags  = root.getElementsByTagName(query),
         length = tags.length,
         total = 0, count = 0, index = 0,
         ordered = [], queue = [];
@@ -844,10 +845,10 @@ PortableCache.prototype = {
     // In case there were no cachable tags / all img were lazyload
     if (total === 0 && typeof callback == 'function') callback();
   },
-  queryTags: function(queries, callback) {
+  queryTags: function(root, queries, callback) {
     var count = 0, length = queries.length;
     while (queries.length) {
-      this.resolveTag(queries.shift(), function() {
+      this.resolveTag(root, queries.shift(), function() {
         if (++count == length && typeof callback == 'function')
           callback();
       });
