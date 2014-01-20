@@ -1,4 +1,4 @@
-/*! PortableCache - v0.7.3 - 2014-01-15
+/*! PortableCache - v0.7.3 - 2014-01-20
 * https://github.com/agektmr/PortableCache
 * Copyright (c) 2014 Eiji Kitamura (agektmr+github@gmail.com); Licensed  */
 (function(window, document) {
@@ -537,10 +537,30 @@ CacheEntry.prototype = {
       this.src = this.content;
     }
 
-    switch (this.tag) {
-      case 'audio':
-      case 'video':
-      case 'img':
+    switch (this.mimetype) {
+      case 'audio/wav':
+      case 'audio/x-wav':
+      case 'audio/aiff':
+      case 'audio/x-aiff':
+      case 'audio/mpeg':
+      case 'video/mpeg':
+      case 'video/h264':
+      case 'video/3gpp':
+      case 'video/ogg':
+      case 'video/quicktime':
+      case 'image/png':
+      case 'image/jpeg':
+      case 'image/gif':
+      case 'image/svg+xml':
+      case 'image/tiff':
+      case 'image/bmp':
+      case 'application/x-font-woff':
+      case 'font/x-font-woff':
+      case 'font/font-woff':
+      case 'font/woff':
+      case 'font/ttf':
+      case 'font/eot':
+      case 'font/otf':
         if (this.src) {
           this.elem.setAttribute('src', this.src);
           __debug && console.log('[%s] replaced src of <%s>', this.url, this.tag);
@@ -551,7 +571,10 @@ CacheEntry.prototype = {
           addEventListenerFn(this.elem, 'load', callback);
         }
         break;
-      case 'script':
+      case 'text/javascript':
+      case 'application/javascript':
+      case 'application/x-javascript':
+      case 'application/json':
         if (this.src) {
           this.elem.async = this.async;
           this.elem.setAttribute('src', this.src);
@@ -573,7 +596,7 @@ CacheEntry.prototype = {
           addEventListenerFn(this.elem, 'load', callback);
         }
         break;
-      case 'link':
+      case 'text/css':
         // TODO: link tag isn't necessarily a stylesheet
         // TODO: support templates (angular, handlebar, webcomponents, etc)
         if (this.src) {
@@ -593,7 +616,25 @@ CacheEntry.prototype = {
           addEventListenerFn(this.elem, 'load', callback);
         }
         break;
+
+      case 'text/plain':
+      case 'text/html':
+      case 'text/xhtml+xml':
+      case 'application/xml':
+        // When Templates, etc
+        break;
       default:
+        // If content was not fetched (no cache fallback, imperative usage)
+        var url = this.tag == 'script' ? 'src' :
+                  this.tag == 'link'   ? 'href' :
+                  this.tag == 'img'    ? 'src' :
+                  this.tag == 'audio'  ? 'src' :
+                  this.tag == 'video'  ? 'src' : undefined;
+        if (url) {
+          this.elem.setAttribute(url, this.url);
+          __debug && console.log('[%s] fallback to <%s>', this.url, this.tag);
+          addEventListenerFn(this.elem, 'load', callback);
+        }
         break;
     }
   },
