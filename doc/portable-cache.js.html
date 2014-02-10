@@ -1,9 +1,93 @@
-/*! PortableCache - v0.7.3 - 2014-02-10
-* https://github.com/agektmr/PortableCache
-* Copyright (c) 2014 Eiji Kitamura (agektmr+github@gmail.com); Licensed  */
-(function(window, document) {
+<!DOCTYPE html>
 
-var config = {
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>PortableCache Source: portable-cache.js</title>
+
+	<!--[if lt IE 9]>
+	<script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+	<![endif]-->
+	<link type="text/css" rel="stylesheet" href="styles/sunlight.default.css">
+
+	
+	<link type="text/css" rel="stylesheet" href="styles/site.united.css">
+	
+</head>
+
+<body>
+<div class="container-fluid">
+	<div class="navbar navbar-fixed-top navbar-inverse">
+		<div class="navbar-inner">
+			<a class="brand" href="index.html">PortableCache</a>
+			<ul class="nav">
+				
+				<li class="dropdown">
+					<a href="classes.list.html" class="dropdown-toggle" data-toggle="dropdown">Classes<b
+						class="caret"></b></a>
+
+					<ul class="dropdown-menu ">
+						
+						<li>
+							<a href="CacheEntry.html">CacheEntry</a>
+						</li>
+						
+						<li>
+							<a href="PortableCache.html">PortableCache</a>
+						</li>
+						
+
+					</ul>
+				</li>
+				
+				<li class="dropdown">
+					<a href="global.html" class="dropdown-toggle" data-toggle="dropdown">Global<b
+						class="caret"></b></a>
+
+					<ul class="dropdown-menu ">
+						
+						<li>
+							<a href="global.html#base64encode">base64encode</a>
+						</li>
+						
+						<li>
+							<a href="global.html#canonicalizePath">canonicalizePath</a>
+						</li>
+						
+						<li>
+							<a href="global.html#createBlob">createBlob</a>
+						</li>
+						
+						<li>
+							<a href="global.html#loadLazyImages">loadLazyImages</a>
+						</li>
+						
+						<li>
+							<a href="global.html#resolveSrcset">resolveSrcset</a>
+						</li>
+						
+
+					</ul>
+				</li>
+				
+			</ul>
+		</div>
+	</div>
+
+	<div class="row-fluid">
+
+		
+			<div class="span12">
+				
+				<div id="main">
+					
+
+
+		<h1 class="page-title">Source: portable-cache.js</h1>
+    
+    <section>
+        <article>
+            <pre class="sunlight-highlight-javascript linenums">var config = {
   'version':            '',
   'auto-init':          'yes',
   'root-path':          '/',
@@ -84,7 +168,7 @@ if (!Function.prototype.bind) {
 
 /**
  * Encodes input into base64 string 
- * @param  {Array.<number>} s An array of numbers to be converted.
+ * @param  {Array.&lt;number>} s An array of numbers to be converted.
  * @return {string}           A base64 string.
  * @private
  */
@@ -92,15 +176,15 @@ var base64encode = function(s) {
   var base64list = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
   var t = '', p = -6, a = 0, i = 0, v = 0, c;
 
-  while ((i < s.length) || (p > -6)) {
-    if (p < 0) {
-      if (i < s.length) {
+  while ((i &lt; s.length) || (p > -6)) {
+    if (p &lt; 0) {
+      if (i &lt; s.length) {
         c = s[i++];
         v += 8;
       } else {
         c = 0;
       }
-      a = ((a&255)<<8)|(c&255);
+      a = ((a&255)&lt;&lt;8)|(c&255);
       p += 8;
     }
     t += base64list.charAt((v > 0) ? (a>>p)&63 : 64);
@@ -144,9 +228,9 @@ var createBlob = function(content, mimetype) {
 
 /**
  * Canonicalize URL path.
- * ex) Converts '../css/style.css' into '/app/css/style.css'.
- * @param  {string} path Path portion of URL that could be relatively specified.
- * @return {string}      Path portion of URL absolutely specified.
+ * ex) Converts `../css/style.css` into `http://demo.agektmr.com/app/css/style.css`.
+ * @param  {string} path Relatively specified URL path.
+ * @return {string}      Absolute URL.
  * @private
  */
 var canonicalizePath = function(path) {
@@ -175,7 +259,7 @@ var canonicalizePath = function(path) {
 };
 
 /**
- * Resolve url from srcset syntax http://www.w3.org/html/wg/drafts/srcset/w3c-srcset/
+ * Resolve url from `srcset` syntax http://www.w3.org/html/wg/drafts/srcset/w3c-srcset/
  * @param  {string}           src    Default URL
  * @param  {string}           srcset `srcset` argument
  * @param  {number|undefined} dpr    Device pixel ratio
@@ -192,10 +276,10 @@ var resolveSrcset = function(src, srcset, dpr, width) {
   var candidates = [], i = 0, cand;
 
   candidates.push({url:src, w:Infinity, x:1});
-  for (i = 0; i < list.length; i++) {
+  for (i = 0; i &lt; list.length; i++) {
     var tokens = list[i].split(/\s+/g);
     // Ignore if there's only URL
-    if (tokens.length < 2) continue;
+    if (tokens.length &lt; 2) continue;
     var url = tokens.shift(),
         token, cond = {url: url, x: 1, w: Infinity};
     while (token = tokens.shift(), token !== undefined) {
@@ -209,25 +293,25 @@ var resolveSrcset = function(src, srcset, dpr, width) {
 
   var bestw = Infinity, bestx = 0;
   // find best width
-  for (i = 0; i < candidates.length; i++) {
+  for (i = 0; i &lt; candidates.length; i++) {
     cand = candidates[i];
-    if (width <= cand.w && cand.w <= bestw) {
+    if (width &lt;= cand.w && cand.w &lt;= bestw) {
       bestw = cand.w;
     }
   }
   // find best dpr
-  for (i = 0; i < candidates.length; i++) {
+  for (i = 0; i &lt; candidates.length; i++) {
     cand = candidates[i];
     // traverse only best width
     if (cand.w !== bestw) continue;
     if (bestx === 0) {
       bestx = cand.x;
-    } else if (dpr <= cand.x && (dpr > bestx || cand.x < bestx)) {
+    } else if (dpr &lt;= cand.x && (dpr > bestx || cand.x &lt; bestx)) {
       bestx = cand.x;
     }
   }
   // find best candidate
-  for (i = 0; i < candidates.length; i++) {
+  for (i = 0; i &lt; candidates.length; i++) {
     cand = candidates[i];
     if (cand.x == bestx && cand.w == bestw) {
       return cand.url;
@@ -238,7 +322,7 @@ var resolveSrcset = function(src, srcset, dpr, width) {
 
 /**
  * Load images that came into viewport from list of lazyload elements
- * @param  {Array.<CacheEntry>} cacheList An array of `CacheEntry` to lazyload
+ * @param  {Array.&lt;CacheEntry>} cacheList An array of `CacheEntry` to lazyload
  * @private
  */
 var loadLazyImages = function(cacheList) {
@@ -246,11 +330,11 @@ var loadLazyImages = function(cacheList) {
   var pageHeight = window.innerHeight || document.documentElement.clientHeight;
   var min = scrollY - (pageHeight/4);
   var max = scrollY + ~~(pageHeight*1.25);
-  for (var i = 0; i < cacheList.length; i++) {
+  for (var i = 0; i &lt; cacheList.length; i++) {
     var cache = cacheList[i];
     var elemY = cache.elem.offsetTop;
     var elemHeight = cache.elem.offsetHeight;
-    if (elemY+elemHeight <= min || elemY <= max) {
+    if (elemY+elemHeight &lt;= min || elemY &lt;= max) {
       cache.load(function onCacheLoaded(cache) {
         cache.constructDOM();
       });
@@ -292,7 +376,7 @@ var Cookies = {
   },
   keys: /* optional method: you can safely remove it! */ function () {
     var aKeys = document.cookie.replace(/((?:^|\s*;)[^\=]+)(?=;|$)|^\s*|\s*(?:\=[^;]*)?(?:\1|$)/g, "").split(/\s*(?:\=[^;]*)?;\s*/);
-    for (var nIdx = 0; nIdx < aKeys.length; nIdx++) { aKeys[nIdx] = unescape(aKeys[nIdx]); }
+    for (var nIdx = 0; nIdx &lt; aKeys.length; nIdx++) { aKeys[nIdx] = unescape(aKeys[nIdx]); }
     return aKeys;
   }
 };
@@ -303,11 +387,61 @@ var Cookies = {
  * @constructor
  */
 var CacheEntry = function(entry) {
+  /**
+   * URL to be set to actual `src` or `href`.
+   * @public
+   */
   this.src        = '';
+  /**
+   * The content of cached resource.
+   * @public
+   */
   this.content    = '';
+  /**
+   * Mimetype of the content.
+   * @public
+   */
   this.mimetype   = '';
+  /**
+   * Boolean flag indicating if image lazyload is required.
+   * @public
+   */
   this.lazyload   = false;
+  /**
+   * Parent `HTMLElemenet` of this cache entry.
+   * @public
+   */
   this.root       = document;
+  /**
+   * Tag name of this cache entry.
+   * @public
+   */
+  this.tag        = '';
+  /**
+   * `HTMLElement` of this cache entry.
+   * @public
+   */
+  this.elem       = null;
+  /**
+   * The URL of original resource.
+   * @public
+   */
+  this.url        = '';
+  /**
+   * Version string of this cache entry.
+   * @public
+   */
+  this.version    = '';
+  /**
+   * Async flag of this cache entry. Only set to `script` tags.
+   * @public
+   */
+  this.async      = false;
+  /**
+   * Type of this cache entry. Either `binary`, `json` or `text`.
+   * @public
+   */
+  this.type       = '';
 
   if (entry.nodeName) {
     // If entry is an HTMLElement, all properties will be picked from the element.
@@ -531,7 +665,7 @@ CacheEntry.prototype = {
               // Android Browser 2.x
               var array = [];
               var text = xhr.responseText;
-              for (var i = 0; i < text.length; i++) {
+              for (var i = 0; i &lt; text.length; i++) {
                 var c = text.charCodeAt(i);
                 array.push(c & 0xff);
               }
@@ -605,11 +739,11 @@ CacheEntry.prototype = {
       case 'font/otf':
         if (this.src) {
           this.elem.setAttribute('src', this.src);
-          __debug && console.log('[%s] replaced src of <%s>', this.url, this.tag);
+          __debug && console.log('[%s] replaced src of &lt;%s>', this.url, this.tag);
           callback();
         } else {
           this.elem.setAttribute('src', this.url);
-          __debug && console.log('[%s] fallback to <%s>', this.url, this.tag);
+          __debug && console.log('[%s] fallback to &lt;%s>', this.url, this.tag);
           addEventListenerFn(this.elem, 'load', callback);
         }
         break;
@@ -620,7 +754,7 @@ CacheEntry.prototype = {
         if (this.src) {
           this.elem.async = this.async;
           this.elem.setAttribute('src', this.src);
-          __debug && console.log('[%s] replaced src of <script>', this.url);
+          __debug && console.log('[%s] replaced src of &lt;script>', this.url);
           addEventListenerFn(this.elem, 'load', callback);
         } else if (this.content) {
           this.tag = 'script';
@@ -628,31 +762,31 @@ CacheEntry.prototype = {
           this.elem.async = this.async;
           this.elem.textContent = this.content;
           this.root.head.appendChild(this.elem);
-          __debug && console.log('[%s] inlined to <script>', this.url);
+          __debug && console.log('[%s] inlined to &lt;script>', this.url);
           callback();
           return;
         } else {
           this.elem.async = this.async;
           this.elem.setAttribute('src', this.url);
-          __debug && console.log('[%s] fallback to <script>', this.url);
+          __debug && console.log('[%s] fallback to &lt;script>', this.url);
           addEventListenerFn(this.elem, 'load', callback);
         }
         break;
       case 'text/css':
         if (this.src) {
           this.elem.setAttribute('href', this.src);
-          __debug && console.log('[%s] replaced href of <link>', this.url);
+          __debug && console.log('[%s] replaced href of &lt;link>', this.url);
           callback();
         } else if (this.content && this.elem.rel == 'stylesheet') {
           this.tag = 'style';
           this.elem = document.createElement('style');
           this.elem.textContent = this.content;
           this.root.head.appendChild(this.elem);
-          __debug && console.log('[%s] inserted <style>', this.url);
+          __debug && console.log('[%s] inserted &lt;style>', this.url);
           callback();
         } else {
           this.elem.setAttribute('href', this.url);
-          __debug && console.log('[%s] fallback to <link>', this.url);
+          __debug && console.log('[%s] fallback to &lt;link>', this.url);
           addEventListenerFn(this.elem, 'load', callback);
         }
         break;
@@ -672,7 +806,7 @@ CacheEntry.prototype = {
                   this.tag == 'video'  ? 'src' : undefined;
         if (url) {
           this.elem.setAttribute(url, this.url);
-          __debug && console.log('[%s] fallback to <%s>', this.url, this.tag);
+          __debug && console.log('[%s] fallback to &lt;%s>', this.url, this.tag);
           addEventListenerFn(this.elem, 'load', callback);
         }
         break;
@@ -753,7 +887,15 @@ CacheEntry.prototype = {
  * @constructor
  */
 var PortableCache = function() {
+  /**
+   * An array of `CacheEntry`.
+   * @public
+   */
   this.entries = [];
+  /**
+   * An array of `CacheEntry` which has lazyload flag `true`.
+   * @public
+   */
   this.lazyload = [];
 
   // Parse configuration
@@ -873,7 +1015,7 @@ PortableCache.prototype = {
       }
     };
 
-    for (var i = 0; i < length; i++) {
+    for (var i = 0; i &lt; length; i++) {
       if (tags[i].getAttribute('data-cache-url') !== null) {
         total++;
         var cache = new CacheEntry(tags[i]);
@@ -909,7 +1051,7 @@ PortableCache.prototype = {
   /**
    * 
    * @param  {HTMLElement}        root     Root `HTMLElement`
-   * @param  {Array.<string>}     queries  An array of tag names to resolve
+   * @param  {Array.&lt;string>}     queries  An array of tag names to resolve
    * @param  {Function} callback  callback A callback function to call when all tags are resolved
    */
   queryTags: function(root, queries, callback) {
@@ -923,7 +1065,7 @@ PortableCache.prototype = {
   },
   /**
    * Parse meta[name="portable-cache"] and override global `config` variable.
-   * @return {null}
+   * @return {void}
    */
   parseConfig: function() {
     // Load configuration
@@ -932,7 +1074,7 @@ PortableCache.prototype = {
       meta = document.querySelector('meta[name="portable-cache"]');
     } else {
       var metas = document.getElementsByTagName('meta');
-      for (var i = 0; i < metas.length; i++) {
+      for (var i = 0; i &lt; metas.length; i++) {
         var name = metas[i].getAttribute('name');
         if (name == 'portable-cache') {
           meta = metas[i];
@@ -944,7 +1086,7 @@ PortableCache.prototype = {
       // Load configuration
       var content = meta.getAttribute('content');
       var tokens = content.split(/\s*,\s*/g);
-      for (var j = 0; j < tokens.length; j++) {
+      for (var j = 0; j &lt; tokens.length; j++) {
         var t = tokens[j].split('=');
         if (t.length === 2) {
           config[t[0]] = t[1];
@@ -970,7 +1112,7 @@ PortableCache.prototype = {
    * @return {CacheEntry|undefined}         `CacheEntry` if match found. Otherwise `undefined`.
    */
   getEntryByUrl: function(url) {
-    for (var i = 0; i < this.entries.length; i++) {
+    for (var i = 0; i &lt; this.entries.length; i++) {
       if (this.entries[i].url === url) {
         return this.entries[i];
       }
@@ -981,7 +1123,7 @@ PortableCache.prototype = {
    * Removes all CacheEntry
    */
   clearAllCache: function() {
-    for (var i = 0; i < this.entries.length; i++) {
+    for (var i = 0; i &lt; this.entries.length; i++) {
       this.entries[i].removeCache();
     }
   },
@@ -1442,6 +1584,65 @@ ls.prototype = {
 
 window.CacheEntry = CacheEntry;
 window.PortableCache = new PortableCache();
+</pre>
+        </article>
+    </section>
 
 
-})(window, document);
+
+
+
+				</div>
+
+				<div class="clearfix"></div>
+				<footer>
+					
+					
+		<span class="copyright">
+		Developed by Eiji Kitamura
+		</span>
+					<br />
+					
+		<span class="jsdoc-message">
+		Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.0</a>
+		on Mon Feb 10 2014 22:58:42 GMT+0900 (JST) using the <a href="https://github.com/terryweiss/docstrap">DocStrap template</a>.
+		</span>
+				</footer>
+			</div>
+
+			
+			<br clear="both">
+		</div>
+
+	</div>
+	<script src="scripts/sunlight.js"></script>
+	<script src="scripts/sunlight.javascript.js"></script>
+	<script src="scripts/sunlight-plugin.doclinks.js"></script>
+	<script src="scripts/sunlight-plugin.linenumbers.js"></script>
+	<script src="scripts/sunlight-plugin.menu.js"></script>
+	<script src="scripts/jquery.min.js"></script>
+	<script src="scripts/jquery.scrollTo.js"></script>
+	<script src="scripts/jquery.localScroll.js"></script>
+	<script src="scripts/bootstrap-dropdown.js"></script>
+	<script src="scripts/toc.js"></script>
+
+
+	<script>  Sunlight.highlightAll({lineNumbers:true,  showMenu: true, enableDoclinks :true}); </script>
+
+	<script>
+		$( function () {
+			$( "#toc" ).toc( {
+				selectors   : "h1,h2,h3,h4",
+				showAndHide : false,
+				scrollTo    : 60
+			} );
+			$( "#toc>ul" ).addClass( "nav nav-pills nav-stacked" );
+			$( "#main span[id^='toc']" ).addClass( "toc-shim" );
+
+		} );
+	</script>
+
+	
+
+</body>
+</html>

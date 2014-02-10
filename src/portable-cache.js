@@ -77,6 +77,12 @@ if (!Function.prototype.bind) {
   };
 }
 
+/**
+ * Encodes input into base64 string 
+ * @param  {Array.<number>} s An array of numbers to be converted.
+ * @return {string}           A base64 string.
+ * @private
+ */
 var base64encode = function(s) {
   var base64list = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
   var t = '', p = -6, a = 0, i = 0, v = 0, c;
@@ -100,11 +106,12 @@ var base64encode = function(s) {
 };
 
 /**
- * Creates Blob object
- * @param  {Blob|ArrayBuffer|string}  content   A Content consists of either ArrayBuffer or String to
- *                                              create Blob from. If Blob, return as is.
- * @param  {String}                   mimetype  A mimetype string of the Blob to create.
- * @return {Blob}                               Generated Blob.
+ * Creates `Blob` object
+ * @param  {Blob|ArrayBuffer|string}  content   A Content consists of either `ArrayBuffer` or `String` to
+ *                                              create `Blob` from. If `Blob`, return as is.
+ * @param  {String}                   mimetype  A mimetype string of the `Blob` to create.
+ * @return {Blob}                               Generated `Blob`.
+ * @private
  */
 var createBlob = function(content, mimetype) {
   var blob = null;
@@ -132,9 +139,10 @@ var createBlob = function(content, mimetype) {
 
 /**
  * Canonicalize URL path.
- * ex) Converts '../css/style.css' into '/app/css/style.css'.
- * @param  {string} path Path portion of URL that could be relatively specified.
- * @return {string}      Path portion of URL absolutely specified.
+ * ex) Converts `../css/style.css` into `http://demo.agektmr.com/app/css/style.css`.
+ * @param  {string} path Relatively specified URL path.
+ * @return {string}      Absolute URL.
+ * @private
  */
 var canonicalizePath = function(path) {
   if (path.indexOf('http') === 0) return path;
@@ -162,12 +170,13 @@ var canonicalizePath = function(path) {
 };
 
 /**
- * Resolve url from srcset syntax http://www.w3.org/html/wg/drafts/srcset/w3c-srcset/
+ * Resolve url from `srcset` syntax http://www.w3.org/html/wg/drafts/srcset/w3c-srcset/
  * @param  {string}           src    Default URL
- * @param  {string}           srcset srcset argument
+ * @param  {string}           srcset `srcset` argument
  * @param  {number|undefined} dpr    Device pixel ratio
  * @param  {number|undefined} width  Viewport width
  * @return {string} Parsed and resolved URL
+ * @private
  */
 var resolveSrcset = function(src, srcset, dpr, width) {
   if (srcset === null) return src;
@@ -224,7 +233,8 @@ var resolveSrcset = function(src, srcset, dpr, width) {
 
 /**
  * Load images that came into viewport from list of lazyload elements
- * @param  {Array.<CacheEntry>} cacheList An array of CacheEntrys to lazyload
+ * @param  {Array.<CacheEntry>} cacheList An array of `CacheEntry` to lazyload
+ * @private
  */
 var loadLazyImages = function(cacheList) {
   var scrollY = window.pageYOffset || document.documentElement.scrollTop;
@@ -283,16 +293,66 @@ var Cookies = {
 };
 
 /**
- * CacheEntry constructor. Takes either an Object or an HTMLElement.
- * @param {Object|HTMLElement} data   Data object that 
+ * CacheEntry constructor. Takes either an `Object` or an `HTMLElement`.
+ * @param {Object|HTMLElement} data   Seed data object.
  * @constructor
  */
 var CacheEntry = function(entry) {
+  /**
+   * URL to be set to actual `src` or `href`.
+   * @public
+   */
   this.src        = '';
+  /**
+   * The content of cached resource.
+   * @public
+   */
   this.content    = '';
+  /**
+   * Mimetype of the content.
+   * @public
+   */
   this.mimetype   = '';
+  /**
+   * Boolean flag indicating if image lazyload is required.
+   * @public
+   */
   this.lazyload   = false;
+  /**
+   * Parent `HTMLElemenet` of this cache entry.
+   * @public
+   */
   this.root       = document;
+  /**
+   * Tag name of this cache entry.
+   * @public
+   */
+  this.tag        = '';
+  /**
+   * `HTMLElement` of this cache entry.
+   * @public
+   */
+  this.elem       = null;
+  /**
+   * The URL of original resource.
+   * @public
+   */
+  this.url        = '';
+  /**
+   * Version string of this cache entry.
+   * @public
+   */
+  this.version    = '';
+  /**
+   * Async flag of this cache entry. Only set to `script` tags.
+   * @public
+   */
+  this.async      = false;
+  /**
+   * Type of this cache entry. Either `binary`, `json` or `text`.
+   * @public
+   */
+  this.type       = '';
 
   if (entry.nodeName) {
     // If entry is an HTMLElement, all properties will be picked from the element.
@@ -330,6 +390,10 @@ var CacheEntry = function(entry) {
   }
 };
 CacheEntry.prototype = {
+  /**
+   * Loads content. If cache is available, see if it is the latest and fetch/cache if required, otherwise respond with cache.
+   * @param  {Function} callback called with `CacheEntry` as an argument.
+   */
   load: function(callback) {
     callback = typeof callback != 'function' ? function(){} : callback;
 
@@ -382,18 +446,29 @@ CacheEntry.prototype = {
       }, errorCallback);
     }
   },
+  /**
+   * Reads cache from storage.
+   * @param  {Function} callback      called when storage respond with cache or an error (null as an argument).
+   * @param  {Function} errorCallback called when storage is not available.
+   */
   readCache: function(callback, errorCallback) {
     if (storage) {
-      storage.get(this, callback, function onStorageGetError(e) {
-        __debug && console.error('[%s] %s', this.url, e);
+      storage.get(this, callback, function onStorageGetError(em) {
+        __debug && console.error('[%s] %s', this.url, em);
         callback(null);
       });
     } else {
       __debug && console.error('[%s] storage not ready', this.url);
       if (typeof errorCallback == 'function')
-        errorCallback(null);
+        errorCallback('storage not ready');
     }
   },
+  /**
+   * Creates a cache in storage. If storage is not available, calls an error. If storage is WebSQL, `update` instead of `insert`. If content is css, recursively look for url and replace it with absolute url (and hopefully replace with cached url in the future).
+   * @param  {Boolean}  cacheExists   `true` if cache already exists in stroage. otherwise `false`.
+   * @param  {Function} callback      Called when the storage successfully store the content.
+   * @param  {Function} errorCallback Called when the storage failed to store the content.
+   */
   createCache: function(cacheExists, callback, errorCallback) {
     // If cache already exists and storage is WebSQL, "update" instead of "set"
     var method = (cacheExists && storage instanceof sql) ? 'update' : 'set';
@@ -406,8 +481,9 @@ CacheEntry.prototype = {
     }
 
     // Apply only to css files
-    if (this.url.indexOf('.css') !== -1) {
-      this.content = this.content.replace(/url\('?"?(.*?)"?'?\)/g, function onReplace(pattern, match) {
+    if (this.mimetype == 'text/css') {
+      this.content = this.content.replace(/url\s*(\('|\("|'|")(.*?)("\)|'\)|"|')/g,
+                       function onReplace(pattern, dummy, match) {
         return "url('"+canonicalizePath(match)+"')";
       });
     }
@@ -439,13 +515,23 @@ CacheEntry.prototype = {
       });
     }
   },
+  /**
+   * Removes cache from storage if avaiable then callback. Otherwise, call the error callback.
+   * @param  {Function} callback      called when cache removal succeeds.
+   * @param  {Function} errorCallback called when storage is not available.
+   */
   removeCache: function(callback, errorCallback) {
     if (storage) {
-      storage.remove(this);
+      storage.remove(this, callback, errorCallback);
     } else if (typeof errorCallback == 'function') {
       errorCallback('storage not ready.');
     }
   },
+  /**
+   * Fetches content from the remote server. If requested content is a binary, tries its best to fetch as `Blob`. If response is 200 or 304, callback with content appended data. Otherwise, calls an error callback.
+   * @param  {Function} callback      called when fetch succeded.
+   * @param  {Function} errorCallback called when fetch failed.
+   */
   fetch: function(callback, errorCallback) {
     var xhr = new XMLHttpRequest();
     var supportsType = (typeof xhr.responseType == 'string');
@@ -526,6 +612,10 @@ CacheEntry.prototype = {
     }).bind(this);
     xhr.send();
   },
+  /**
+   * Constructs DOM element depending on its Mime Type.
+   * @param  {Function} callback [description]
+   */
   constructDOM: function(callback) {
     callback = typeof callback !== 'function' ? function(){} : callback;
 
@@ -633,6 +723,11 @@ CacheEntry.prototype = {
         break;
     }
   },
+  /**
+   * Obtains content with requested format.
+   * @param  {String}   type     Either "text", "arraybuffer" or "blob".
+   * @param  {Function} callback called when content is properly converted (if required).
+   */
   getContentAs: function(type, callback) {
     var reader = Blob ? new FileReader() : null;
 
@@ -698,8 +793,20 @@ CacheEntry.prototype = {
   }
 };
 
+/**
+ * Manages automated bootstrap of portable caches.
+ * @constructor
+ */
 var PortableCache = function() {
+  /**
+   * An array of `CacheEntry`.
+   * @public
+   */
   this.entries = [];
+  /**
+   * An array of `CacheEntry` which has lazyload flag `true`.
+   * @public
+   */
   this.lazyload = [];
 
   // Parse configuration
@@ -733,15 +840,19 @@ var PortableCache = function() {
 
     // Initialize best available storage
     var ps = config['preferred-storage'];
-    storage = (ps=='filesystem'   || (requestFileSystem && ps=='auto')) ?
-              new fs(bootstrap, errorCallback.bind(this)) :
-              (ps=='idb'          || (indexedDB         && ps=='auto')) ?
-              new idb(bootstrap, errorCallback.bind(this)) :
-              (ps=='sql'          || (openDatabase      && ps=='auto')) ?
-              new sql(bootstrap, errorCallback.bind(this)) :
-              (ps=='localstorage' || (localStorage      && ps=='auto')) ?
-              new ls(bootstrap, errorCallback.bind(this)) :
-              undefined;
+    try {
+      storage = (ps=='filesystem'   || (requestFileSystem && ps=='auto')) ?
+                new fs(bootstrap, errorCallback.bind(this)) :
+                (ps=='idb'          || (indexedDB         && ps=='auto')) ?
+                new idb(bootstrap, errorCallback.bind(this)) :
+                (ps=='sql'          || (openDatabase      && ps=='auto')) ?
+                new sql(bootstrap, errorCallback.bind(this)) :
+                (ps=='localstorage' || (localStorage      && ps=='auto')) ?
+                new ls(bootstrap, errorCallback.bind(this)) :
+                undefined;
+    } catch (e) {
+      storage = undefined;
+    }
 
     if (!storage) {
       // No available storages found
@@ -752,6 +863,9 @@ var PortableCache = function() {
 };
 
 PortableCache.prototype = {
+  /**
+   * Traverse DOM and replace URLs
+   */
   bootstrap: function() {
     var onLazyload = (function() {
       if (this.lazyload.length) {
@@ -793,6 +907,12 @@ PortableCache.prototype = {
     }).bind(this));
     Cookies.setItem('pcache_version', config['version'], null, config['root-path']);
   },
+  /**
+   * Search DOM and create `CacheEntry`, then resolve.
+   * @param  {HTMLElement}      root     Root `HTMLElement`
+   * @param  {string}           query    A tag name to resolve
+   * @param  {Function}         callback A callback function to call when all DOM are loaded
+   */
   resolveTag: function(root, query, callback) {
     var tags  = root.getElementsByTagName(query),
         length = tags.length,
@@ -839,6 +959,12 @@ PortableCache.prototype = {
     // In case there were no cachable tags / all img were lazyload
     if (total === 0 && typeof callback == 'function') callback();
   },
+  /**
+   * 
+   * @param  {HTMLElement}        root     Root `HTMLElement`
+   * @param  {Array.<string>}     queries  An array of tag names to resolve
+   * @param  {Function} callback  callback A callback function to call when all tags are resolved
+   */
   queryTags: function(root, queries, callback) {
     var count = 0, length = queries.length;
     while (queries.length) {
@@ -849,8 +975,8 @@ PortableCache.prototype = {
     }
   },
   /**
-   * Parse meta[name="portable-cache"] and override global "config"
-   * @return {Object} Overridden global "config" object
+   * Parse meta[name="portable-cache"] and override global `config` variable.
+   * @return {void}
    */
   parseConfig: function() {
     // Load configuration
@@ -891,6 +1017,11 @@ PortableCache.prototype = {
 
     return;
   },
+  /**
+   * Returns a `CacheEntry` that matches the given URL
+   * @param  {string}                 url   Original resource URL to get.
+   * @return {CacheEntry|undefined}         `CacheEntry` if match found. Otherwise `undefined`.
+   */
   getEntryByUrl: function(url) {
     for (var i = 0; i < this.entries.length; i++) {
       if (this.entries[i].url === url) {
@@ -899,6 +1030,9 @@ PortableCache.prototype = {
     }
     return undefined;
   },
+  /**
+   * Removes all CacheEntry
+   */
   clearAllCache: function() {
     for (var i = 0; i < this.entries.length; i++) {
       this.entries[i].removeCache();
@@ -906,8 +1040,8 @@ PortableCache.prototype = {
   },
   /**
    * Returns PortableCache configuration
-   * @param  {String} property
-   * @return Configuration if available. Empty property argument will return config object.
+   * @param  {string} property
+   * @return Configuration if available. Empty property argument will return `config` object.
    */
   getConfig: function(property) {
     if (property === undefined) {
@@ -966,8 +1100,10 @@ fs.prototype = {
           };
 
           writer.onerror = function onFileWriteError(e) {
-            __debug && console.error('[%s] error creating data on FileSystem: %s', cache.url, e);
-            errorCallback('error creating data on FileSystem: '+e);
+            // FileError object
+            var error = e.target.error;
+            __debug && console.error('[%s] error creating data on FileSystem: %s', cache.url, e.message);
+            errorCallback('error creating data on FileSystem: '+e.message);
           };
 
           if (typeof cache.content == 'string') {
@@ -978,11 +1114,12 @@ fs.prototype = {
         });
       },
       function onGetFileError(e) {
-        errorCallback('error creating data on FileSystem: '+e);
+        __debug && console.error('[%s] error creating data on FileSystem: %s', cache.url, e.message);
+        errorCallback('error creating data on FileSystem: '+e.message);
       });
     },
     function onGetDirectoryError(e) {
-      errorCallback('error getting directory on FileSystem: '+e);
+      errorCallback('error getting directory on FileSystem: '+e.message);
     });
   },
   get: function(cache, callback, errorCallback) {
@@ -1010,15 +1147,15 @@ fs.prototype = {
               },
               function(e) {
                 // TODO: check error candidates
-                __debug && console.error('[%s] error getting data on FileSystem: %s', cache.url, e);
+                __debug && console.error('[%s] error getting data on FileSystem: %s', cache.url, e.message);
                 errorCallback('error getting data on FileSystem: '+e.message);
               });
             },
             function onGetFileError(e) {
               // TODO: error here is transitioning from FileError to DOMError
-              __debug && console.error('[%s] error getting data on FileSystem: %s', cache.url, e);
+              __debug && console.error('[%s] error getting data on FileSystem: %s', cache.url, e.message);
               // Assume NotFoundError for the moment
-              errorCallback('error getting data on FileSystem'+e);
+              callback(null);
             });
           },
           function onGetDirectoryError(e) {
@@ -1043,15 +1180,15 @@ fs.prototype = {
         fileEntry.remove(function onRemove() {
           ls.remove(cache, callback, errorCallback);
         }, function onRemoveError(e) {
-          errorCallback('error removing data on FileSystem: '+e);
+          errorCallback('error removing data on FileSystem: '+e.message);
         });
       },
       function onGetFileError(e) {
-        errorCallback('error removing data on FileSystem: '+e);
+        errorCallback('error removing data on FileSystem: '+e.meesage);
       });
     },
     function onGetDirectoryError(e) {
-      errorCallback('error getting directory on FileSystem: '+e);
+      errorCallback('error getting directory on FileSystem: '+e.message);
     });
   },
   convertURL: function(url) {

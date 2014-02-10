@@ -81,18 +81,21 @@ module.exports = function(grunt) {
     qunit: {
       files: ['test/**/*.html']
     },
+    connect: {
+      sites: {}
+    },
     watch: {
       files: [
-        'Gruntfile.js',
         'src/*'
       ],
       tasks: ['compress']
     },
     jsdoc: {
       dist: {
-        src: ['src/portable-cache.js'],
+        src: ['src/portable-cache.js', 'README.md'],
         options: {
-          destination: 'doc'
+          destination: 'doc',
+          configure: 'jsdoc-config.json'
         }
       }
     }
@@ -104,12 +107,13 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-qunit');
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-contrib-watch');
+  grunt.loadNpmTasks('grunt-contrib-connect');
   grunt.loadNpmTasks('grunt-bower-task');
   grunt.loadNpmTasks('grunt-jsdoc');
 
   // Default task.
-  grunt.registerTask('compress', ['concat', 'uglify']);
   grunt.registerTask('install', ['bower']);
-  grunt.registerTask('doc', ['jsdoc']);
+  grunt.registerTask('default', ['connect', 'watch']);
+  grunt.registerTask('build',   ['concat', 'uglify', 'jsdoc']);
 
 };

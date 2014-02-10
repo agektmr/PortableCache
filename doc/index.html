@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>PortableCache Index</title>
+
+	<!--[if lt IE 9]>
+	<script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+	<![endif]-->
+	<link type="text/css" rel="stylesheet" href="styles/sunlight.default.css">
+
+	
+	<link type="text/css" rel="stylesheet" href="styles/site.united.css">
+	
+</head>
+
+<body>
+<div class="container-fluid">
+	<div class="navbar navbar-fixed-top navbar-inverse">
+		<div class="navbar-inner">
+			<a class="brand" href="index.html">PortableCache</a>
+			<ul class="nav">
+				
+				<li class="dropdown">
+					<a href="classes.list.html" class="dropdown-toggle" data-toggle="dropdown">Classes<b
+						class="caret"></b></a>
+
+					<ul class="dropdown-menu ">
+						
+						<li>
+							<a href="CacheEntry.html">CacheEntry</a>
+						</li>
+						
+						<li>
+							<a href="PortableCache.html">PortableCache</a>
+						</li>
+						
+
+					</ul>
+				</li>
+				
+				<li class="dropdown">
+					<a href="global.html" class="dropdown-toggle" data-toggle="dropdown">Global<b
+						class="caret"></b></a>
+
+					<ul class="dropdown-menu ">
+						
+						<li>
+							<a href="global.html#base64encode">base64encode</a>
+						</li>
+						
+						<li>
+							<a href="global.html#canonicalizePath">canonicalizePath</a>
+						</li>
+						
+						<li>
+							<a href="global.html#createBlob">createBlob</a>
+						</li>
+						
+						<li>
+							<a href="global.html#loadLazyImages">loadLazyImages</a>
+						</li>
+						
+						<li>
+							<a href="global.html#resolveSrcset">resolveSrcset</a>
+						</li>
+						
+
+					</ul>
+				</li>
+				
+			</ul>
+		</div>
+	</div>
+
+	<div class="row-fluid">
+
+		
+		<div class="span8">
+			
+				<div id="main">
+					
+
+
+	
+	<span class="page-title">Index</span>
+	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+	
+	
+
+
+
+
+
+    <section>
+        <article><h1>PortableCache</h1>
+<p><a href="https://github.com/igrigorik/ga-beacon"><img src="https://ga-beacon.appspot.com/UA-46910666-1/agektmr/PortableCache.js" alt="Analytics"></a><br>Cache assets, reduce downloads, load faster.</p>
+<h2>What is PortableCache?</h2>
+<p>PortableCache is a small library for mobile web developers winning better 
+performance. Enables you to cache arbitrary resources (js, css, img, etc) in 
+static storage and reduce server request.</p>
+<ul>
+<li>Declarative APIs (no JavaScript required).</li>
+<li>Uses the best available storage on user's browser:<ul>
+<li>FileSystem</li>
+<li>IndexedDB</li>
+<li>WebSQL</li>
+<li>LocalStorage</li>
+</ul>
+</li>
+<li>Fallback gracefully when no storage mechanism is available.</li>
+<li>Provides imperative APIs as well for fine grained control.</li>
+</ul>
+<p>Bonus points:</p>
+<ul>
+<li>Lazyload images.</li>
+<li>Responsive images using <code>srcset</code> syntax.</li>
+</ul>
+<h3>Who should use it?</h3>
+<ul>
+<li>Responsive web designers.</li>
+<li>Performance enthusiasts.</li>
+<li>Developers who have dreamed of using 
+<a href="http://www.whatwg.org/specs/web-apps/current-work/multipage/offline.html">ApplicationCache</a> 
+to reduce traffic.</li>
+</ul>
+<p>Unlike AppCache, PortableCache can:</p>
+<ul>
+<li>Permanently cache heavy resources without caching root HTML.</li>
+<li>Update assets without reloading.</li>
+<li>version per content.</li>
+<li>maintain far easier.</li>
+</ul>
+<h2>Examples</h2>
+<h3>Example Codes</h3>
+<p>Visit <a href="https://github.com/agektmr/PortableCache/wiki/Example-Codes">Example codes page on GitHub Wiki</a>.</p>
+<h3>Demos</h3>
+<h4><a href="http://demo.agektmr.com/portable-cache/">PortableCache</a></h4>
+<p>Simplest example of using declarative API, lazyload and responsive images.</p>
+<h4><a href="http://demo.agektmr.com/drumpad/">Web Audio Drumpad</a></h4>
+<p>Imperative API usage example. Audio sample data are imperatively cached and used 
+as drum sound. It is a good example of deferred AngularJS (1.0.0~) bootstrap. 
+Works on Chrome, Safari and Firefox.</p>
+<h2>Quick Start</h2>
+<p>You can quickly try out PortableCache by following 3 steps.</p>
+<ol>
+<li>Insert following <code>meta</code> tag to your existing project's <code>head</code> tag.&lt;br/&gt;
+<code>&lt;meta name=&quot;portable-cache&quot; content=&quot;version=20131228&quot;&gt;</code></li>
+<li>Insert <code>script</code> tag to load <code>portable-cache.js</code> (Make sure it is below 
+<code>meta[name=&quot;portable-cache&quot;]</code>).&lt;br/&gt;
+<code>&lt;script src=&quot;js/portable-cache.js&quot;&gt;</code></li>
+<li>Replace attribute name of resources you'd like to cache with 
+<code>data-cache-url</code>.&lt;br/&gt;
+<code>&lt;img src=&quot;img/image.jpg&quot;&gt;</code>&lt;br/&gt;
+<code>&lt;img data-cache-url=&quot;img/image.jpg&quot;&gt;</code></li>
+</ol>
+<h2>Installing PortableCache</h2>
+<p>PortableCache is available thorugh <a href="http://bower.io/">bower</a>.</p>
+<pre><code>bower install PortableCache</code></pre>
+<p>You can of course clone from repository.</p>
+<pre><code>git clone git@github.com:agektmr/PortableCache.git</code></pre>
+<h3>Size (as of 0.7.3)</h3>
+<ul>
+<li>plain: 47.8KB</li>
+<li>minified: 18.3KB</li>
+<li>gzipped: 7.0KB</li>
+</ul>
+<h2>APIs</h2>
+<p>Visit <a href="https://github.com/agektmr/PortableCache/wiki/APIs">APIs page on GitHub Wiki</a>.</p>
+<h2>Browser Support</h2>
+<p>Following browsers are supported by PortableCache.</p>
+<ul>
+<li>Chrome (FileSystem API)</li>
+<li>Firefox (IndexedDB)</li>
+<li>IE 9 (LocalStorage)</li>
+<li>IE 10, 11 (IndexedDB)</li>
+<li>Android Browser 2.3 (WebSQL)</li>
+<li>Android Browser 4 (WebSQL)</li>
+<li>Safari 7 (WebSQL)</li>
+</ul>
+<p>Following browsers are confirmed to gracefully fallback on PortableCache</p>
+<ul>
+<li>IE 6, 7, 8</li>
+</ul>
+<p>Need tests on following browsers</p>
+<ul>
+<li>Android Browser 3 (WebSQL)</li>
+<li>Safari 5 (WebSQL)</li>
+<li>Safari 6 (WebSQL)</li>
+</ul>
+<p>Browsers not listed here are yet to be tested.</p>
+<h2>FAQ</h2>
+<h3>When exactly is <code>pcache-ready</code> event called?</h3>
+<p>PortableCache bootstraps loading <code>link</code> tag and <code>script</code> tag first. pcache-ready 
+event fires after all <code>link</code> tags and <code>script</code> tags (except ones with <code>async</code> 
+attribute attached) are loaded and executed.</p>
+<h3>What happens if storage's quota exceed?</h3>
+<p>If quota exceeds on user's browser, PortableCache will simply give up storing 
+cache and fallback to use remote resource. But some browsers request permission 
+for larger quota to users. On any of those browsers, PortableCache will handle 
+gracefully and continue using storage if granted.</p>
+<h3>How do I separate cache version per URL path?</h3>
+<p>You may notice version string you have assigned to a website is tied to the 
+entire host, potentially overwriting same host's other apps' versions which is 
+path separated.<br>For example, you have an app on<br><a href="http://example.com/app/"><a href="http://example.com/app-a/">http://example.com/app-a/</a></a><br>Then you create another app on<br><a href="http://example.com/app-b/"><a href="http://example.com/app-b/">http://example.com/app-b/</a></a><br>In this case, whichever app user opens will overwrite the other app's version 
+string.</p>
+<p>You can avoid this by giving <code>root-path</code> to <code>meta[name=&quot;portable-cache&quot;]</code>.</p>
+<pre><code>&lt;meta name=&quot;portable-cache&quot; content=&quot;version=20130110, root-path=/app-a&quot;&gt;</code></pre>
+<p>This way, the version string is tied to the app path rather than the entire 
+host.</p>
+<h3>Can I use lazyload / responsive image features without caching?</h3>
+<p>Absolutely. Just set <code>data-cache-version</code> as an empty string. PortableCache will 
+simply use remote resource URL with lazyload / srcset features left available.</p>
+<pre><code>&lt;img data-cache-url=&quot;img/image.jpg&quot; data-cache-srcset=&quot;img/image-320.jpg 320w, img/image-640.jpg 640w, img/image-640.jpg 320w 2x&quot; data-cache-version=&quot;&quot; lazyload&gt;</code></pre>
+<h3>Can I detect unsupported browsers on server side?</h3>
+<p>You may wish to remove PortableCache if a browser is known to be unsupported.<br>You can use a version string stored as <code>pcache_version</code> in cookie which<br>PortableCache sends. If a browser is already proved to be unsupported (fallback 
+without caching), it carries a string <code>NOT_SUPPORTED</code> instead of a version 
+string. Catch this cookie on your server so it can serve an HTML without 
+PortableCache to avoid JavaScript parsing overheads.</p>
+<h2>Author</h2>
+<ul>
+<li>Eiji Kitamura (<a href="https://google.com/+agektmr">+agektmr</a>, 
+<a href="https://twitter.com/agektmr">@agektmr</a>)</li>
+</ul></article>
+    </section>
+
+
+
+
+
+
+
+				</div>
+
+				<div class="clearfix"></div>
+				<footer>
+					
+					
+		<span class="copyright">
+		Developed by Eiji Kitamura
+		</span>
+					<br />
+					
+		<span class="jsdoc-message">
+		Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.0</a>
+		on Mon Feb 10 2014 22:58:43 GMT+0900 (JST) using the <a href="https://github.com/terryweiss/docstrap">DocStrap template</a>.
+		</span>
+				</footer>
+			</div>
+
+			
+			<div class="span3">
+				<div id="toc"></div>
+			</div>
+			
+			<br clear="both">
+		</div>
+
+	</div>
+	<script src="scripts/sunlight.js"></script>
+	<script src="scripts/sunlight.javascript.js"></script>
+	<script src="scripts/sunlight-plugin.doclinks.js"></script>
+	<script src="scripts/sunlight-plugin.linenumbers.js"></script>
+	<script src="scripts/sunlight-plugin.menu.js"></script>
+	<script src="scripts/jquery.min.js"></script>
+	<script src="scripts/jquery.scrollTo.js"></script>
+	<script src="scripts/jquery.localScroll.js"></script>
+	<script src="scripts/bootstrap-dropdown.js"></script>
+	<script src="scripts/toc.js"></script>
+
+
+	<script>  Sunlight.highlightAll({lineNumbers:true,  showMenu: true, enableDoclinks :true}); </script>
+
+	<script>
+		$( function () {
+			$( "#toc" ).toc( {
+				selectors   : "h1,h2,h3,h4",
+				showAndHide : false,
+				scrollTo    : 60
+			} );
+			$( "#toc>ul" ).addClass( "nav nav-pills nav-stacked" );
+			$( "#main span[id^='toc']" ).addClass( "toc-shim" );
+
+		} );
+	</script>
+
+	
+
+</body>
+</html>
