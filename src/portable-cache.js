@@ -1052,6 +1052,12 @@ PortableCache.prototype = {
   }
 };
 
+/**
+ * FileSystem API
+ * @param  {Function} callback      called when instance successfully constructed
+ * @param  {Function} errorCallback called when instance construction failed
+ * @constructor
+ */
 var fs = function(callback, errorCallback) {
   errorCallback = typeof errorCallback != 'function' ? function(){} : errorCallback;
 
@@ -1071,6 +1077,13 @@ var fs = function(callback, errorCallback) {
   });
 };
 fs.prototype = {
+  /**
+   * Sets data in FileSystem API
+   * @param {CacheEntry}  cache              `CacheEntry` object to store
+   * @param {Function}    callback           Called when data successfully set
+   * @param {Function}    errorCallback      Called when data failed to set
+   * @param {Function}    quotaErrorCallback Called when quota exceeds
+   */
   set: function(cache, callback, errorCallback, quotaErrorCallback) {
     var ls = this.ls;
     errorCallback = typeof errorCallback != 'function' ? function(){} : errorCallback;
@@ -1122,6 +1135,12 @@ fs.prototype = {
       errorCallback('error getting directory on FileSystem: '+e.message);
     });
   },
+  /**
+   * Gets data from FileSystem API
+   * @param {CacheEntry}  cache              `CacheEntry` object to append data
+   * @param {Function}    callback           Called when data successfully got
+   * @param {Function}    errorCallback      Called when data failed to get
+   */
   get: function(cache, callback, errorCallback) {
     if (!this.ls) {
       __debug && console.info('[%s] LocalStorage not ready', cache.url);
@@ -1168,6 +1187,12 @@ fs.prototype = {
       }).bind(this), errorCallback);
     }
   },
+  /**
+   * Removes data from FileSystem API
+   * @param {CacheEntry}  cache              `CacheEntry` object to remove data
+   * @param {Function}    callback           Called when data successfully removed
+   * @param {Function}    errorCallback      Called when data failed to remove
+   */
   remove: function(cache, callback, errorCallback) {
     var ls = this.ls;
     errorCallback = typeof errorCallback != 'function' ? function(){} : errorCallback;
@@ -1191,11 +1216,22 @@ fs.prototype = {
       errorCallback('error getting directory on FileSystem: '+e.message);
     });
   },
+  /**
+   * Converts URL into FileSystem valid
+   * @param  {string} url URL
+   * @return {string}     String valid as a FileSystem URL
+   */
   convertURL: function(url) {
     return url.replace(/\/|\\/g, '_');
   }
 };
 
+/**
+ * IndexedDB API
+ * @param  {Function} callback      called when instance successfully constructed
+ * @param  {Function} errorCallback called when instance construction failed
+ * @constructor
+ */
 var idb = function(callback, errorCallback) {
   errorCallback = typeof errorCallback != 'function' ? function(){} : errorCallback;
 
@@ -1292,6 +1328,12 @@ idb.prototype = {
   }
 };
 
+/**
+ * WebSQL Database
+ * @param  {Function} callback      called when instance successfully constructed
+ * @param  {Function} errorCallback called when instance construction failed
+ * @constructor
+ */
 var sql = function(callback, errorCallback) {
   callback = typeof callback != 'function' ? function(){} : callback;
 
@@ -1428,6 +1470,12 @@ sql.prototype = {
   }
 };
 
+/**
+ * LocalStorage
+ * @param  {Function} callback      called when instance successfully constructed
+ * @param  {Function} errorCallback called when instance construction failed
+ * @constructor
+ */
 var ls = function(callback, errorCallback) {
   if (!localStorage) {
     if (typeof errorCallback == 'function')

@@ -1,4 +1,4 @@
-/*! PortableCache - v0.7.3 - 2014-02-10
+/*! PortableCache - v0.7.3 - 2014-02-22
 * https://github.com/agektmr/PortableCache
 * Copyright (c) 2014 Eiji Kitamura (agektmr+github@gmail.com); Licensed  */
 (function(window, document) {
@@ -144,9 +144,9 @@ var createBlob = function(content, mimetype) {
 
 /**
  * Canonicalize URL path.
- * ex) Converts '../css/style.css' into '/app/css/style.css'.
- * @param  {string} path Path portion of URL that could be relatively specified.
- * @return {string}      Path portion of URL absolutely specified.
+ * ex) Converts `../css/style.css` into `http://demo.agektmr.com/app/css/style.css`.
+ * @param  {string} path Relatively specified URL path.
+ * @return {string}      Absolute URL.
  * @private
  */
 var canonicalizePath = function(path) {
@@ -175,7 +175,7 @@ var canonicalizePath = function(path) {
 };
 
 /**
- * Resolve url from srcset syntax http://www.w3.org/html/wg/drafts/srcset/w3c-srcset/
+ * Resolve url from `srcset` syntax http://www.w3.org/html/wg/drafts/srcset/w3c-srcset/
  * @param  {string}           src    Default URL
  * @param  {string}           srcset `srcset` argument
  * @param  {number|undefined} dpr    Device pixel ratio
@@ -303,11 +303,61 @@ var Cookies = {
  * @constructor
  */
 var CacheEntry = function(entry) {
+  /**
+   * URL to be set to actual `src` or `href`.
+   * @public
+   */
   this.src        = '';
+  /**
+   * The content of cached resource.
+   * @public
+   */
   this.content    = '';
+  /**
+   * Mimetype of the content.
+   * @public
+   */
   this.mimetype   = '';
+  /**
+   * Boolean flag indicating if image lazyload is required.
+   * @public
+   */
   this.lazyload   = false;
+  /**
+   * Parent `HTMLElemenet` of this cache entry.
+   * @public
+   */
   this.root       = document;
+  /**
+   * Tag name of this cache entry.
+   * @public
+   */
+  this.tag        = '';
+  /**
+   * `HTMLElement` of this cache entry.
+   * @public
+   */
+  this.elem       = null;
+  /**
+   * The URL of original resource.
+   * @public
+   */
+  this.url        = '';
+  /**
+   * Version string of this cache entry.
+   * @public
+   */
+  this.version    = '';
+  /**
+   * Async flag of this cache entry. Only set to `script` tags.
+   * @public
+   */
+  this.async      = false;
+  /**
+   * Type of this cache entry. Either `binary`, `json` or `text`.
+   * @public
+   */
+  this.type       = '';
 
   if (entry.nodeName) {
     // If entry is an HTMLElement, all properties will be picked from the element.
@@ -753,7 +803,15 @@ CacheEntry.prototype = {
  * @constructor
  */
 var PortableCache = function() {
+  /**
+   * An array of `CacheEntry`.
+   * @public
+   */
   this.entries = [];
+  /**
+   * An array of `CacheEntry` which has lazyload flag `true`.
+   * @public
+   */
   this.lazyload = [];
 
   // Parse configuration
@@ -923,7 +981,7 @@ PortableCache.prototype = {
   },
   /**
    * Parse meta[name="portable-cache"] and override global `config` variable.
-   * @return {null}
+   * @return {void}
    */
   parseConfig: function() {
     // Load configuration
@@ -999,6 +1057,12 @@ PortableCache.prototype = {
   }
 };
 
+/**
+ * FileSystem API
+ * @param  {Function} callback      called when instance successfully constructed
+ * @param  {Function} errorCallback called when instance construction failed
+ * @constructor
+ */
 var fs = function(callback, errorCallback) {
   errorCallback = typeof errorCallback != 'function' ? function(){} : errorCallback;
 
@@ -1018,6 +1082,13 @@ var fs = function(callback, errorCallback) {
   });
 };
 fs.prototype = {
+  /**
+   * Sets data in FileSystem API
+   * @param {CacheEntry}  cache              `CacheEntry` object to store
+   * @param {Function}    callback           Called when data successfully set
+   * @param {Function}    errorCallback      Called when data failed to set
+   * @param {Function}    quotaErrorCallback Called when quota exceeds
+   */
   set: function(cache, callback, errorCallback, quotaErrorCallback) {
     var ls = this.ls;
     errorCallback = typeof errorCallback != 'function' ? function(){} : errorCallback;
@@ -1069,6 +1140,12 @@ fs.prototype = {
       errorCallback('error getting directory on FileSystem: '+e.message);
     });
   },
+  /**
+   * Gets data from FileSystem API
+   * @param {CacheEntry}  cache              `CacheEntry` object to append data
+   * @param {Function}    callback           Called when data successfully got
+   * @param {Function}    errorCallback      Called when data failed to get
+   */
   get: function(cache, callback, errorCallback) {
     if (!this.ls) {
       __debug && console.info('[%s] LocalStorage not ready', cache.url);
@@ -1115,6 +1192,12 @@ fs.prototype = {
       }).bind(this), errorCallback);
     }
   },
+  /**
+   * Removes data from FileSystem API
+   * @param {CacheEntry}  cache              `CacheEntry` object to remove data
+   * @param {Function}    callback           Called when data successfully removed
+   * @param {Function}    errorCallback      Called when data failed to remove
+   */
   remove: function(cache, callback, errorCallback) {
     var ls = this.ls;
     errorCallback = typeof errorCallback != 'function' ? function(){} : errorCallback;
@@ -1138,11 +1221,22 @@ fs.prototype = {
       errorCallback('error getting directory on FileSystem: '+e.message);
     });
   },
+  /**
+   * Converts URL into FileSystem valid
+   * @param  {string} url URL
+   * @return {string}     String valid as a FileSystem URL
+   */
   convertURL: function(url) {
     return url.replace(/\/|\\/g, '_');
   }
 };
 
+/**
+ * IndexedDB API
+ * @param  {Function} callback      called when instance successfully constructed
+ * @param  {Function} errorCallback called when instance construction failed
+ * @constructor
+ */
 var idb = function(callback, errorCallback) {
   errorCallback = typeof errorCallback != 'function' ? function(){} : errorCallback;
 
@@ -1239,6 +1333,12 @@ idb.prototype = {
   }
 };
 
+/**
+ * WebSQL Database
+ * @param  {Function} callback      called when instance successfully constructed
+ * @param  {Function} errorCallback called when instance construction failed
+ * @constructor
+ */
 var sql = function(callback, errorCallback) {
   callback = typeof callback != 'function' ? function(){} : callback;
 
@@ -1375,6 +1475,12 @@ sql.prototype = {
   }
 };
 
+/**
+ * LocalStorage
+ * @param  {Function} callback      called when instance successfully constructed
+ * @param  {Function} errorCallback called when instance construction failed
+ * @constructor
+ */
 var ls = function(callback, errorCallback) {
   if (!localStorage) {
     if (typeof errorCallback == 'function')
