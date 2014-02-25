@@ -53,33 +53,18 @@ module.exports = function(grunt) {
         }
       }
     },
-    jshint: {
-      options: {
-        curly: true,
-        eqeqeq: true,
-        immed: true,
-        latedef: true,
-        newcap: true,
-        noarg: true,
-        sub: true,
-        undef: true,
-        unused: true,
-        boss: true,
-        eqnull: true,
-        browser: true,
-        globals: {
-          jQuery: true
+    jasmine: {
+      basic: {
+        src: 'src/portable-cache.js',
+        options: {
+          vendor: 'tests/underscore.js',
+          specs: 'tests/spec/PortableCacheSpec.js',
+          helpers: 'tests/spec/PortableCacheHelper.js',
+          template: 'tests/specRunner.tmpl',
+          outfile: 'tests/specRunner.html',
+          keepRunner: true
         }
-      },
-      gruntfile: {
-        src: 'Gruntfile.js'
-      },
-      lib_test: {
-        src: ['lib/**/*.js', 'test/**/*.js']
       }
-    },
-    qunit: {
-      files: ['test/**/*.html']
     },
     connect: {
       sites: {}
@@ -104,16 +89,17 @@ module.exports = function(grunt) {
   // These plugins provide necessary tasks.
   grunt.loadNpmTasks('grunt-contrib-concat');
   grunt.loadNpmTasks('grunt-contrib-uglify');
-  grunt.loadNpmTasks('grunt-contrib-qunit');
-  grunt.loadNpmTasks('grunt-contrib-jshint');
+  grunt.loadNpmTasks('grunt-contrib-jasmine');
   grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-contrib-connect');
   grunt.loadNpmTasks('grunt-bower-task');
   grunt.loadNpmTasks('grunt-jsdoc');
 
   // Default task.
-  grunt.registerTask('install', ['bower']);
-  grunt.registerTask('default', ['connect', 'watch']);
-  grunt.registerTask('build',   ['concat', 'uglify', 'jsdoc']);
+  grunt.registerTask('default',   ['connect', 'watch']);
+  grunt.registerTask('install',   ['bower']);
+  grunt.registerTask('test',      ['jasmine']);
+  grunt.registerTask('compress',  ['concat', 'uglify']);
+  grunt.registerTask('build',     ['compress', 'test', 'jsdoc']);
 
 };

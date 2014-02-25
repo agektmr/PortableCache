@@ -1,6 +1,11 @@
 {
   "name": "PortableCache",
   "version": "0.7.3",
+  "authors": [
+    "Eiji Kitamura <agektmr+github@gmail.com>"
+  ],
+  "description": "Cache assets, reduce downloads, load faster.",
+  "homepage": "https://github.com/agektmr/PortableCache",
   "main": [
     "dist/portable-cache.js",
     "dist/portable-cache.min.js"
@@ -10,7 +15,9 @@
     "type": "git",
     "url": "git://github.com/agektmr/PortableCache"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "underscore": "~1.6.0"
+  },
   "ignore": [
     ".*",
     "_*",
