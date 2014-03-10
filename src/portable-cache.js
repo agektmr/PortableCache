@@ -658,6 +658,7 @@ CacheEntry.prototype = {
           addEventListenerFn(this.elem, 'load', callback);
         }
         break;
+
       case 'text/javascript':
       case 'application/javascript':
       case 'application/x-javascript':
@@ -683,6 +684,7 @@ CacheEntry.prototype = {
           addEventListenerFn(this.elem, 'load', callback);
         }
         break;
+
       case 'text/css':
         if (this.src) {
           this.elem.setAttribute('href', this.src);
@@ -708,6 +710,7 @@ CacheEntry.prototype = {
       case 'application/xml':
         // TODO: support templates (angular, handlebar, webcomponents, etc)
         break;
+
       default:
         // If content was not fetched (no cache fallback, imperative usage)
         var url = this.tag == 'script' ? 'src' :
@@ -754,6 +757,7 @@ CacheEntry.prototype = {
           callback(this.content);
         }
         break;
+
       case 'arraybuffer':
         if (reader && this.content instanceof Blob) {
           // Convert content to DataURL
@@ -773,6 +777,7 @@ CacheEntry.prototype = {
           callback(null);
         }
         break;
+
       case 'blob':
         if (this.content instanceof Blob) {
           callback(this.content);
@@ -789,6 +794,10 @@ CacheEntry.prototype = {
           callback(null);
         }
         break;
+
+      default:
+        __debug && console.error('[%s] Unknown type "%s" specified.', this.url, type);
+        callback(null);
     }
   }
 };
@@ -907,6 +916,7 @@ PortableCache.prototype = {
     }).bind(this));
     Cookies.setItem('pcache_version', config['version'], null, config['root-path']);
   },
+
   /**
    * Search DOM and create `CacheEntry`, then resolve.
    * @param  {HTMLElement}      root     Root `HTMLElement`
@@ -959,6 +969,7 @@ PortableCache.prototype = {
     // In case there were no cachable tags / all img were lazyload
     if (total === 0 && typeof callback == 'function') callback();
   },
+
   /**
    * 
    * @param  {HTMLElement}        root     Root `HTMLElement`
@@ -974,6 +985,7 @@ PortableCache.prototype = {
       });
     }
   },
+
   /**
    * Parse meta[name="portable-cache"] and override global `config` variable.
    * @return {void}
@@ -1017,6 +1029,7 @@ PortableCache.prototype = {
 
     return;
   },
+
   /**
    * Returns a `CacheEntry` that matches the given URL
    * @param  {string}                 url   Original resource URL to get.
@@ -1030,6 +1043,7 @@ PortableCache.prototype = {
     }
     return undefined;
   },
+
   /**
    * Removes all CacheEntry
    */
@@ -1038,6 +1052,7 @@ PortableCache.prototype = {
       this.entries[i].removeCache();
     }
   },
+
   /**
    * Returns PortableCache configuration
    * @param  {string} property
@@ -1072,7 +1087,8 @@ var fs = function(callback, errorCallback) {
     this.fs = fs;
     this.ls = new ls();
     if (typeof callback == 'function') callback();
-  }).bind(this), function(e) {
+  }).bind(this),
+  function(e) {
     errorCallback('failed initializing FileSystem.');
   });
 };
@@ -1107,7 +1123,7 @@ fs.prototype = {
               callback(cache);
             }, errorCallback,
             function onQuotaError() {
-              __debug && console.error('quota error creating data on FileSystem.');
+              __debug && console.error('[%s] quota error creating data on FileSystem.', cache.url);
               quotaErrorCallback();
             });
           };
@@ -1366,6 +1382,8 @@ var sql = function(callback, errorCallback) {
 };
 sql.prototype = {
   set: function(cache, callback, errorCallback, quotaErrorCallback) {
+    errorCallback = typeof errorCallback != 'function' ? function(){} : errorCallback;
+
     this.db.transaction(function onTransaction(t) {
       t.executeSql('INSERT INTO cache (url, content, mimetype, version) VALUES(?, ?, ?, ?)',
       [ cache.url, cache.content, cache.mimetype, cache.version ],
@@ -1375,8 +1393,7 @@ sql.prototype = {
         if (e.code === e.CONSTRAINT_ERR) {
           msg = 'URL already exists in cache. Check version string.';
         }
-        if (typeof errorCallback == 'function')
-          errorCallback('error inserting data into WebSQL: '+msg);
+        errorCallback('error inserting data into WebSQL: '+msg);
       });
     },
     function onTransactionError(e) {
@@ -1393,18 +1410,19 @@ sql.prototype = {
     });
   },
   update: function(cache, callback, errorCallback, quotaErrorCallback) {
+    errorCallback = typeof errorCallback != 'function' ? function(){} : errorCallback;
+
     this.db.transaction(function onTransaction(t) {
       t.executeSql('UPDATE cache SET mimetype=?, content=?, version=? WHERE url=?',
       [ cache.mimetype, cache.content, cache.version, cache.url ],
       function onExecuteSql(t, results) {},
       function onExecuteSqlError(t, e) {
-        if (typeof errorCallback == 'function')
-          errorCallback('error updating data on WebSQL: '+e.message);
+        errorCallback('error updating data on WebSQL: '+e.message);
       });
     },
     function onTransactionError(e) {
       __debug && console.error('[%s] error updating data on WebSQL: %s', cache.url, e.message);
-      if (e.code === e.QUOTA_ERR) {
+      if (e.code === e.QUOTA_ERR && typeof quotaErrorCallback == 'function') {
         quotaErrorCallback();
       } else {
         errorCallback('error updating data on WebSQL: '+e.message);
@@ -1451,12 +1469,13 @@ sql.prototype = {
     });
   },
   remove: function(cache, callback, errorCallback) {
+    errorCallback = typeof errorCallback != 'function' ? function(){} : errorCallback;
+
     this.db.transaction(function onTransaction(t) {
       t.executeSql('DELETE FROM cache WHERE url=?', [cache.url],
       function onExecuteSql(t, results) {},
       function onExecuteSqlError(t, e) {
-        if (typeof errorCallback == 'function')
-          errorCallback('error removing WebSQL cache: '+e.message);
+        errorCallback('error removing WebSQL cache: '+e.message);
       });
     },
     function onTransactionError(e) {
@@ -1477,13 +1496,12 @@ sql.prototype = {
  * @constructor
  */
 var ls = function(callback, errorCallback) {
-  if (!localStorage) {
-    if (typeof errorCallback == 'function')
-      errorCallback('LocalStorage not supported on this browser.');
-    return;
-  }
-
   setTimeout(function() {
+    if (!localStorage) {
+      if (typeof errorCallback == 'function')
+        errorCallback('LocalStorage not supported on this browser.');
+      return;
+    }
     if (typeof callback == 'function') callback();
   }, 0);
 };
@@ -1501,11 +1519,11 @@ ls.prototype = {
         __debug && console.log('[%s] success inserting data into LocalStorage', cache.url);
         if (typeof callback == 'function') callback(cache);
       } catch (e) {
-        __debug && console.error('[%s] %s', cache.url, e.message);
-        if (e.code === e.QUOTA_EXCEEDED_ERR) {
+        __debug && console.error('[%s] error setting data to LocalStorage: %s', cache.url, e.message);
+        if (e.code === e.QUOTA_EXCEEDED_ERR && typeof quotaErrorCallback == 'function') {
           quotaErrorCallback();
         } if (typeof errorCallback == 'function') {
-            errorCallback(e.message);
+          errorCallback(e.message);
         }
       }
     }, 0);
