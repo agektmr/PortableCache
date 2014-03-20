@@ -146,12 +146,11 @@ var createBlob = function(content, mimetype) {
  */
 var canonicalizePath = function(path) {
   if (path.indexOf('http') === 0) return path;
-  if (path.indexOf('//') === 0) return location.protocol+path;
+  if (path.indexOf('//') === 0)   return location.protocol+path;
+  if (path.indexOf('/') === 0)    return location.origin+path;
 
-  var trim = function(s) {
-    return s===''?false:true;
-  };
-  var prefix_ = location.pathname.split('/').filter(trim);
+  var prefix_ = location.pathname.split('/');
+  prefix_.pop(); // Remove last value
   var path_ = path.split('/');
   do {
     switch (path_[0]) {
@@ -166,7 +165,7 @@ var canonicalizePath = function(path) {
     }
   } while (path_[0] == '..');
   path_ = prefix_.concat(path_);
-  return location.origin+'/'+path_.join('/');
+  return location.origin+path_.join('/');
 };
 
 /**
@@ -446,6 +445,7 @@ CacheEntry.prototype = {
       }, errorCallback);
     }
   },
+  
   /**
    * Reads cache from storage.
    * @param  {Function} callback      called when storage respond with cache or an error (null as an argument).
@@ -463,6 +463,7 @@ CacheEntry.prototype = {
         errorCallback('storage not ready');
     }
   },
+
   /**
    * Creates a cache in storage. If storage is not available, calls an error. If storage is WebSQL, `update` instead of `insert`. If content is css, recursively look for url and replace it with absolute url (and hopefully replace with cached url in the future).
    * @param  {Boolean}  cacheExists   `true` if cache already exists in stroage. otherwise `false`.
@@ -515,6 +516,7 @@ CacheEntry.prototype = {
       });
     }
   },
+
   /**
    * Removes cache from storage if avaiable then callback. Otherwise, call the error callback.
    * @param  {Function} callback      called when cache removal succeeds.
@@ -527,6 +529,7 @@ CacheEntry.prototype = {
       errorCallback('storage not ready.');
     }
   },
+
   /**
    * Fetches content from the remote server. If requested content is a binary, tries its best to fetch as `Blob`. If response is 200 or 304, callback with content appended data. Otherwise, calls an error callback.
    * @param  {Function} callback      called when fetch succeded.
@@ -612,6 +615,7 @@ CacheEntry.prototype = {
     }).bind(this);
     xhr.send();
   },
+
   /**
    * Constructs DOM element depending on its Mime Type.
    * @param  {Function} callback [description]
@@ -726,6 +730,7 @@ CacheEntry.prototype = {
         break;
     }
   },
+
   /**
    * Obtains content with requested format.
    * @param  {String}   type     Either "text", "arraybuffer" or "blob".
@@ -1556,6 +1561,19 @@ ls.prototype = {
           errorCallback(e.message);
       }
     }, 0);
+  },
+  clear: function(callback, errorCallback) {
+    setTimeout(function localStorageClear() {
+      try {
+        localStorage.clear();
+        __debug && console.log('Success clearing data from LocalStorage');
+        if (typeof callback == 'function') callback();
+      } catch (e) {
+        __debug && console.error('Error clearing data from LocalStorage');
+        if (typeof errorCallback == 'function')
+          errorCallback(e.message);
+      }
+    });
   }
 };
 
